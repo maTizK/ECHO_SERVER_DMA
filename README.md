@@ -1,4 +1,4 @@
-ECHO_SERVER_NODMA
+ECHO_SERVER_DMA
 =================
 
 Echo server provide simple TCP server with echo output. 
