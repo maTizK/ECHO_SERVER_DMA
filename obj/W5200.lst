@@ -1,0 +1,2958 @@
+   1              		.syntax unified
+   2              		.cpu cortex-m4
+   3              		.eabi_attribute 27, 3
+   4              		.fpu fpv4-sp-d16
+   5              		.eabi_attribute 20, 1
+   6              		.eabi_attribute 21, 1
+   7              		.eabi_attribute 23, 3
+   8              		.eabi_attribute 24, 1
+   9              		.eabi_attribute 25, 1
+  10              		.eabi_attribute 26, 1
+  11              		.eabi_attribute 30, 6
+  12              		.eabi_attribute 34, 1
+  13              		.eabi_attribute 18, 4
+  14              		.thumb
+  15              		.file	"W5200.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.section	.rodata.revision,"a",%progbits
+  20              		.align	2
+  23              	revision:
+  24 0000 2449643A 		.ascii	"$Id: W5200.c 6548 2014-01-16 14:09:04Z svn $\000"
+  24      20573532 
+  24      30302E63 
+  24      20363534 
+  24      38203230 
+  25              		.comm	set_macTaskHandle,4,4
+  26              		.comm	bufferTX,2000,4
+  27              		.comm	bufferRX,2000,4
+  28              		.comm	bufferRXidx,4,4
+  29              		.comm	bufferTXidx,4,4
+  30              		.comm	dat_lengthRX,4,4
+  31              		.comm	dat_lengthTX,4,4
+  32              		.comm	xSemaphoreDMASPI,4,4
+  33 002d 000000   		.section	.bss.xHigherPriorityTaskWoken,"aw",%nobits
+  34              		.align	2
+  37              	xHigherPriorityTaskWoken:
+  38 0000 00000000 		.space	4
+  39              		.section	.rodata.RAMSIZE_TABLE,"a",%progbits
+  40              		.align	2
+  43              	RAMSIZE_TABLE:
+  44 0000 00000000 		.word	0
+  45 0004 00000000 		.word	0
+  46 0008 00200000 		.word	8192
+  47 000c 08000000 		.word	8
+  48 0010 00200000 		.word	8192
+  49 0014 08000000 		.word	8
+  50 0018 00100000 		.word	4096
+  51 001c 04000000 		.word	4
+  52 0020 00100000 		.word	4096
+  53 0024 04000000 		.word	4
+  54 0028 00080000 		.word	2048
+  55 002c 02000000 		.word	2
+  56 0030 00080000 		.word	2048
+  57 0034 02000000 		.word	2
+  58 0038 00080000 		.word	2048
+  59 003c 02000000 		.word	2
+  60 0040 00080000 		.word	2048
+  61 0044 02000000 		.word	2
+  62              		.section	.bss.socket_table,"aw",%nobits
+  63              		.align	2
+  66              	socket_table:
+  67 0000 00000000 		.space	64
+  67      00000000 
+  67      00000000 
+  67      00000000 
+  67      00000000 
+  68              		.section	.bss.socket_flg,"aw",%nobits
+  69              		.align	2
+  72              	socket_flg:
+  73 0000 00000000 		.space	8
+  73      00000000 
+  74              		.section	.rodata.socket_open_status,"a",%progbits
+  75              		.align	2
+  78              	socket_open_status:
+  79 0000 00       		.byte	0
+  80 0001 13       		.byte	19
+  81 0002 22       		.byte	34
+  82 0003 32       		.byte	50
+  83 0004 42       		.byte	66
+  84 0005 5F       		.byte	95
+  85 0006 0000     		.section	.text.wiznet_initialize,"ax",%progbits
+  86              		.align	2
+  87              		.global	wiznet_initialize
+  88              		.thumb
+  89              		.thumb_func
+  91              	wiznet_initialize:
+  92              	.LFB110:
+  93              		.file 1 "App/STM32F4-Discovery/W5200.c"
+   1:App/STM32F4-Discovery/W5200.c **** /* W5200 Device Driver */
+   2:App/STM32F4-Discovery/W5200.c **** 
+   3:App/STM32F4-Discovery/W5200.c **** // $Id: W5200.c 6548 2014-01-16 14:09:04Z svn $
+   4:App/STM32F4-Discovery/W5200.c **** 
+   5:App/STM32F4-Discovery/W5200.c **** // Copyright (C)2013-2014, Philip Munts, President, Munts AM Corp.
+   6:App/STM32F4-Discovery/W5200.c **** // All rights reserved.
+   7:App/STM32F4-Discovery/W5200.c **** //
+   8:App/STM32F4-Discovery/W5200.c **** // Redistribution and use in source and binary forms, with or without
+   9:App/STM32F4-Discovery/W5200.c **** // modification, are permitted provided that the following conditions are met:
+  10:App/STM32F4-Discovery/W5200.c **** //
+  11:App/STM32F4-Discovery/W5200.c **** // * Redistributions of source code must retain the above copyright notice,
+  12:App/STM32F4-Discovery/W5200.c **** //   this list of conditions and the following disclaimer.
+  13:App/STM32F4-Discovery/W5200.c **** //
+  14:App/STM32F4-Discovery/W5200.c **** // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  15:App/STM32F4-Discovery/W5200.c **** // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  16:App/STM32F4-Discovery/W5200.c **** // IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  17:App/STM32F4-Discovery/W5200.c **** // ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+  18:App/STM32F4-Discovery/W5200.c **** // LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  19:App/STM32F4-Discovery/W5200.c **** // CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  20:App/STM32F4-Discovery/W5200.c **** // SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  21:App/STM32F4-Discovery/W5200.c **** // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  22:App/STM32F4-Discovery/W5200.c **** // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  23:App/STM32F4-Discovery/W5200.c **** // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  24:App/STM32F4-Discovery/W5200.c **** // POSSIBILITY OF SUCH DAMAGE.
+  25:App/STM32F4-Discovery/W5200.c **** 
+  26:App/STM32F4-Discovery/W5200.c **** static const char revision[] = "$Id: W5200.c 6548 2014-01-16 14:09:04Z svn $";
+  27:App/STM32F4-Discovery/W5200.c **** 
+  28:App/STM32F4-Discovery/W5200.c **** #include <stdio.h>
+  29:App/STM32F4-Discovery/W5200.c **** #include <stdlib.h>
+  30:App/STM32F4-Discovery/W5200.c **** #include <string.h>
+  31:App/STM32F4-Discovery/W5200.c **** #include "FreeRTOS.h"
+  32:App/STM32F4-Discovery/W5200.c **** 
+  33:App/STM32F4-Discovery/W5200.c **** //#include <cpu.h>
+  34:App/STM32F4-Discovery/W5200.c **** //#include <inet.h>
+  35:App/STM32F4-Discovery/W5200.c **** //#include <socket.h>
+  36:App/STM32F4-Discovery/W5200.c **** #include "wiznet.h"
+  37:App/STM32F4-Discovery/W5200.c **** #include "W5200.h"
+  38:App/STM32F4-Discovery/W5200.c **** #include "spi.h"
+  39:App/STM32F4-Discovery/W5200.c **** #include "task.h"
+  40:App/STM32F4-Discovery/W5200.c **** 
+  41:App/STM32F4-Discovery/W5200.c **** 
+  42:App/STM32F4-Discovery/W5200.c **** 
+  43:App/STM32F4-Discovery/W5200.c **** #define RESET_LOW()	GPIOA->BSRRL |= GPIO_Pin_3;
+  44:App/STM32F4-Discovery/W5200.c **** #define RESET_HIGH()    GPIOA->BSRRH |= GPIO_Pin_3;
+  45:App/STM32F4-Discovery/W5200.c **** 
+  46:App/STM32F4-Discovery/W5200.c **** 
+  47:App/STM32F4-Discovery/W5200.c **** /* This table abstracts the W5200 RAM size configuration for 1 to 8 sockets. */
+  48:App/STM32F4-Discovery/W5200.c **** /* We divide available RAM equally amoung the number of configured sockets.  */
+  49:App/STM32F4-Discovery/W5200.c **** /* We don't try to give unequal amounts of RAM to different sockets.         */
+  50:App/STM32F4-Discovery/W5200.c **** 
+  51:App/STM32F4-Discovery/W5200.c **** 
+  52:App/STM32F4-Discovery/W5200.c **** static const struct
+  53:App/STM32F4-Discovery/W5200.c **** {
+  54:App/STM32F4-Discovery/W5200.c ****   uint32_t SIZE;
+  55:App/STM32F4-Discovery/W5200.c ****   uint32_t CONFIG;
+  56:App/STM32F4-Discovery/W5200.c **** } RAMSIZE_TABLE[W5200_MAX_SOCKETS+1] =
+  57:App/STM32F4-Discovery/W5200.c **** {
+  58:App/STM32F4-Discovery/W5200.c ****   { 0,			0				},
+  59:App/STM32F4-Discovery/W5200.c **** // Does not work => { W5200_RAMSIZE,	W5200_RAMSIZE_CONFIG_WHOLE	},
+  60:App/STM32F4-Discovery/W5200.c ****   { W5200_RAMSIZE/2,	W5200_RAMSIZE_CONFIG_HALF	},
+  61:App/STM32F4-Discovery/W5200.c ****   { W5200_RAMSIZE/2,	W5200_RAMSIZE_CONFIG_HALF	},
+  62:App/STM32F4-Discovery/W5200.c ****   { W5200_RAMSIZE/4,	W5200_RAMSIZE_CONFIG_QUARTER	},
+  63:App/STM32F4-Discovery/W5200.c ****   { W5200_RAMSIZE/4,	W5200_RAMSIZE_CONFIG_QUARTER	},
+  64:App/STM32F4-Discovery/W5200.c ****   { W5200_RAMSIZE/8,	W5200_RAMSIZE_CONFIG_EIGHTH	},
+  65:App/STM32F4-Discovery/W5200.c ****   { W5200_RAMSIZE/8,	W5200_RAMSIZE_CONFIG_EIGHTH	},
+  66:App/STM32F4-Discovery/W5200.c ****   { W5200_RAMSIZE/8,	W5200_RAMSIZE_CONFIG_EIGHTH	},
+  67:App/STM32F4-Discovery/W5200.c ****   { W5200_RAMSIZE/8,	W5200_RAMSIZE_CONFIG_EIGHTH	},
+  68:App/STM32F4-Discovery/W5200.c **** };
+  69:App/STM32F4-Discovery/W5200.c **** 
+  70:App/STM32F4-Discovery/W5200.c **** /* This table holds precalculated TX and RX RAM base addresses for */
+  71:App/STM32F4-Discovery/W5200.c **** /* each socket.                                                    */
+  72:App/STM32F4-Discovery/W5200.c **** 
+  73:App/STM32F4-Discovery/W5200.c **** 
+  74:App/STM32F4-Discovery/W5200.c **** static struct
+  75:App/STM32F4-Discovery/W5200.c **** {
+  76:App/STM32F4-Discovery/W5200.c ****   uint32_t TX_RAM_base;
+  77:App/STM32F4-Discovery/W5200.c ****   uint32_t RX_RAM_base;
+  78:App/STM32F4-Discovery/W5200.c **** } socket_table[W5200_MAX_SOCKETS];
+  79:App/STM32F4-Discovery/W5200.c **** 
+  80:App/STM32F4-Discovery/W5200.c **** static uint8_t socket_flg[W5200_MAX_SOCKETS];
+  81:App/STM32F4-Discovery/W5200.c **** 
+  82:App/STM32F4-Discovery/W5200.c **** 
+  83:App/STM32F4-Discovery/W5200.c **** const static	uint8_t	socket_open_status[] = {
+  84:App/STM32F4-Discovery/W5200.c **** 			W5200_Sn_SR_SOCK_CLOSED,	// mode is CLOSE
+  85:App/STM32F4-Discovery/W5200.c **** 			W5200_Sn_SR_SOCK_INIT,	// mode is TCP
+  86:App/STM32F4-Discovery/W5200.c **** 			W5200_Sn_SR_SOCK_UDP,	// mode is UDP
+  87:App/STM32F4-Discovery/W5200.c **** 			W5200_Sn_SR_SOCK_IPRAW,	// mode is IPRAW
+  88:App/STM32F4-Discovery/W5200.c **** 			W5200_Sn_SR_SOCK_MACRAW,	// mode is MACRAW
+  89:App/STM32F4-Discovery/W5200.c **** 			W5200_Sn_SR_SOCK_PPPOE,	// mode is PPPOE
+  90:App/STM32F4-Discovery/W5200.c **** 		};
+  91:App/STM32F4-Discovery/W5200.c **** 
+  92:App/STM32F4-Discovery/W5200.c **** 
+  93:App/STM32F4-Discovery/W5200.c **** void wiznet_initialize(void)
+  94:App/STM32F4-Discovery/W5200.c **** {
+  94              		.loc 1 94 0
+  95              		.cfi_startproc
+  96              		@ args = 0, pretend = 0, frame = 8
+  97              		@ frame_needed = 1, uses_anonymous_args = 0
+  98 0000 80B5     		push	{r7, lr}
+  99              	.LCFI0:
+ 100              		.cfi_def_cfa_offset 8
+ 101              		.cfi_offset 7, -8
+ 102              		.cfi_offset 14, -4
+ 103 0002 82B0     		sub	sp, sp, #8
+ 104              	.LCFI1:
+ 105              		.cfi_def_cfa_offset 16
+ 106 0004 00AF     		add	r7, sp, #0
+ 107              	.LCFI2:
+ 108              		.cfi_def_cfa_register 7
+  95:App/STM32F4-Discovery/W5200.c **** 
+  96:App/STM32F4-Discovery/W5200.c **** 	// hwreset
+  97:App/STM32F4-Discovery/W5200.c **** 	//RESET_HIGH();
+  98:App/STM32F4-Discovery/W5200.c **** 	//RESET_LOW();
+  99:App/STM32F4-Discovery/W5200.c **** 		
+ 100:App/STM32F4-Discovery/W5200.c **** 	//SW reset 
+ 101:App/STM32F4-Discovery/W5200.c **** 	spi_dma_sendByte(W5200_MR, W5200_MR_RST);
+ 109              		.loc 1 101 0
+ 110 0006 0020     		movs	r0, #0
+ 111 0008 8021     		movs	r1, #128
+ 112 000a FFF7FEFF 		bl	spi_dma_sendByte
+ 102:App/STM32F4-Discovery/W5200.c **** 	// wait until reset complete
+ 103:App/STM32F4-Discovery/W5200.c **** 	uint8_t data = W5200_MR_RST; 
+ 113              		.loc 1 103 0
+ 114 000e 8023     		movs	r3, #128
+ 115 0010 FB70     		strb	r3, [r7, #3]
+ 104:App/STM32F4-Discovery/W5200.c **** 	while((data  && W5200_MR_RST) == W5200_MR_RST)
+ 116              		.loc 1 104 0
+ 117 0012 00BF     		nop
+ 105:App/STM32F4-Discovery/W5200.c **** 	{
+ 106:App/STM32F4-Discovery/W5200.c **** 		spi_dma_read(W5200_MR, 1);
+ 107:App/STM32F4-Discovery/W5200.c **** 		memcpy(&data, bufferRX+4, 1);
+ 108:App/STM32F4-Discovery/W5200.c **** 	}
+ 109:App/STM32F4-Discovery/W5200.c **** 		
+ 110:App/STM32F4-Discovery/W5200.c **** 	// PING enable, PPPoE disable 
+ 111:App/STM32F4-Discovery/W5200.c **** 	spi_dma_sendByte(W5200_MR, 0);
+ 118              		.loc 1 111 0
+ 119 0014 0020     		movs	r0, #0
+ 120 0016 0021     		movs	r1, #0
+ 121 0018 FFF7FEFF 		bl	spi_dma_sendByte
+ 112:App/STM32F4-Discovery/W5200.c **** 	// all socket interrupts sets to nonmask. set '1' is interrupt enable. 
+ 113:App/STM32F4-Discovery/W5200.c **** 	spi_dma_sendByte(W5200_IMR, 0xff);
+ 122              		.loc 1 113 0
+ 123 001c 1620     		movs	r0, #22
+ 124 001e FF21     		movs	r1, #255
+ 125 0020 FFF7FEFF 		bl	spi_dma_sendByte
+ 114:App/STM32F4-Discovery/W5200.c **** 	// IP-confilict, PPPoE Close are mask. set '0' interupt disable. 
+ 115:App/STM32F4-Discovery/W5200.c **** 	spi_dma_sendByte(W5200_IMR2, 0);
+ 126              		.loc 1 115 0
+ 127 0024 3620     		movs	r0, #54
+ 128 0026 0021     		movs	r1, #0
+ 129 0028 FFF7FEFF 		bl	spi_dma_sendByte
+ 116:App/STM32F4-Discovery/W5200.c **** 	// set timeoput to 200msec
+ 117:App/STM32F4-Discovery/W5200.c **** 	spi_dma_sendByte(W5200_RTR, 200);
+ 130              		.loc 1 117 0
+ 131 002c 1720     		movs	r0, #23
+ 132 002e C821     		movs	r1, #200
+ 133 0030 FFF7FEFF 		bl	spi_dma_sendByte
+ 118:App/STM32F4-Discovery/W5200.c **** 	// set retry count register to 3rd
+ 119:App/STM32F4-Discovery/W5200.c **** 	spi_dma_sendByte(W5200_RCR, 3);
+ 134              		.loc 1 119 0
+ 135 0034 1920     		movs	r0, #25
+ 136 0036 0321     		movs	r1, #3
+ 137 0038 FFF7FEFF 		bl	spi_dma_sendByte
+ 120:App/STM32F4-Discovery/W5200.c **** 
+ 121:App/STM32F4-Discovery/W5200.c **** 	int n = 0; 
+ 138              		.loc 1 121 0
+ 139 003c 0023     		movs	r3, #0
+ 140 003e 7B60     		str	r3, [r7, #4]
+ 122:App/STM32F4-Discovery/W5200.c **** 
+ 123:App/STM32F4-Discovery/W5200.c **** 	for (n = 0; n < 8; n++)
+ 141              		.loc 1 123 0
+ 142 0040 0023     		movs	r3, #0
+ 143 0042 7B60     		str	r3, [r7, #4]
+ 144 0044 2BE0     		b	.L2
+ 145              	.L3:
+ 124:App/STM32F4-Discovery/W5200.c **** 	{
+ 125:App/STM32F4-Discovery/W5200.c **** 		spi_dma_sendByte(W5200_Sn_RXMEM_SIZE(n), 0x2);
+ 146              		.loc 1 125 0 discriminator 2
+ 147 0046 7B68     		ldr	r3, [r7, #4]
+ 148 0048 9BB2     		uxth	r3, r3
+ 149 004a 1B02     		lsls	r3, r3, #8
+ 150 004c 9BB2     		uxth	r3, r3
+ 151 004e 03F58043 		add	r3, r3, #16384
+ 152 0052 1E33     		adds	r3, r3, #30
+ 153 0054 9BB2     		uxth	r3, r3
+ 154 0056 1846     		mov	r0, r3
+ 155 0058 0221     		movs	r1, #2
+ 156 005a FFF7FEFF 		bl	spi_dma_sendByte
+ 126:App/STM32F4-Discovery/W5200.c **** 		spi_dma_sendByte(W5200_Sn_TXMEM_SIZE(n),0x2);
+ 157              		.loc 1 126 0 discriminator 2
+ 158 005e 7B68     		ldr	r3, [r7, #4]
+ 159 0060 9BB2     		uxth	r3, r3
+ 160 0062 1B02     		lsls	r3, r3, #8
+ 161 0064 9BB2     		uxth	r3, r3
+ 162 0066 03F58043 		add	r3, r3, #16384
+ 163 006a 1F33     		adds	r3, r3, #31
+ 164 006c 9BB2     		uxth	r3, r3
+ 165 006e 1846     		mov	r0, r3
+ 166 0070 0221     		movs	r1, #2
+ 167 0072 FFF7FEFF 		bl	spi_dma_sendByte
+ 127:App/STM32F4-Discovery/W5200.c **** 		spi_dma_sendByte(W5200_Sn_IMR(n), 0xff);	
+ 168              		.loc 1 127 0 discriminator 2
+ 169 0076 7B68     		ldr	r3, [r7, #4]
+ 170 0078 9BB2     		uxth	r3, r3
+ 171 007a 1B02     		lsls	r3, r3, #8
+ 172 007c 9BB2     		uxth	r3, r3
+ 173 007e 03F58043 		add	r3, r3, #16384
+ 174 0082 2C33     		adds	r3, r3, #44
+ 175 0084 9BB2     		uxth	r3, r3
+ 176 0086 1846     		mov	r0, r3
+ 177 0088 FF21     		movs	r1, #255
+ 178 008a FFF7FEFF 		bl	spi_dma_sendByte
+ 128:App/STM32F4-Discovery/W5200.c **** 		socket_flg[n] = 0;
+ 179              		.loc 1 128 0 discriminator 2
+ 180 008e 074A     		ldr	r2, .L4
+ 181 0090 7B68     		ldr	r3, [r7, #4]
+ 182 0092 1344     		add	r3, r3, r2
+ 183 0094 0022     		movs	r2, #0
+ 184 0096 1A70     		strb	r2, [r3]
+ 123:App/STM32F4-Discovery/W5200.c **** 	for (n = 0; n < 8; n++)
+ 185              		.loc 1 123 0 discriminator 2
+ 186 0098 7B68     		ldr	r3, [r7, #4]
+ 187 009a 0133     		adds	r3, r3, #1
+ 188 009c 7B60     		str	r3, [r7, #4]
+ 189              	.L2:
+ 123:App/STM32F4-Discovery/W5200.c **** 	for (n = 0; n < 8; n++)
+ 190              		.loc 1 123 0 is_stmt 0 discriminator 1
+ 191 009e 7B68     		ldr	r3, [r7, #4]
+ 192 00a0 072B     		cmp	r3, #7
+ 193 00a2 D0DD     		ble	.L3
+ 129:App/STM32F4-Discovery/W5200.c **** 			
+ 130:App/STM32F4-Discovery/W5200.c **** 	}	
+ 131:App/STM32F4-Discovery/W5200.c **** 	
+ 132:App/STM32F4-Discovery/W5200.c **** 	
+ 133:App/STM32F4-Discovery/W5200.c **** 	
+ 134:App/STM32F4-Discovery/W5200.c **** }
+ 194              		.loc 1 134 0 is_stmt 1
+ 195 00a4 0837     		adds	r7, r7, #8
+ 196 00a6 BD46     		mov	sp, r7
+ 197              		@ sp needed
+ 198 00a8 80BD     		pop	{r7, pc}
+ 199              	.L5:
+ 200 00aa 00BF     		.align	2
+ 201              	.L4:
+ 202 00ac 00000000 		.word	socket_flg
+ 203              		.cfi_endproc
+ 204              	.LFE110:
+ 206              		.section	.text.wiznet_set_hardware_address,"ax",%progbits
+ 207              		.align	2
+ 208              		.global	wiznet_set_hardware_address
+ 209              		.thumb
+ 210              		.thumb_func
+ 212              	wiznet_set_hardware_address:
+ 213              	.LFB111:
+ 135:App/STM32F4-Discovery/W5200.c **** 
+ 136:App/STM32F4-Discovery/W5200.c **** void  wiznet_set_hardware_address(const macaddress_t address)
+ 137:App/STM32F4-Discovery/W5200.c **** {
+ 214              		.loc 1 137 0
+ 215              		.cfi_startproc
+ 216              		@ args = 0, pretend = 0, frame = 8
+ 217              		@ frame_needed = 1, uses_anonymous_args = 0
+ 218 0000 80B5     		push	{r7, lr}
+ 219              	.LCFI3:
+ 220              		.cfi_def_cfa_offset 8
+ 221              		.cfi_offset 7, -8
+ 222              		.cfi_offset 14, -4
+ 223 0002 82B0     		sub	sp, sp, #8
+ 224              	.LCFI4:
+ 225              		.cfi_def_cfa_offset 16
+ 226 0004 00AF     		add	r7, sp, #0
+ 227              	.LCFI5:
+ 228              		.cfi_def_cfa_register 7
+ 229 0006 7860     		str	r0, [r7, #4]
+ 138:App/STM32F4-Discovery/W5200.c **** 
+ 139:App/STM32F4-Discovery/W5200.c **** 	spi_dma_send(W5200_SHAR, 6, address);
+ 230              		.loc 1 139 0
+ 231 0008 0920     		movs	r0, #9
+ 232 000a 0621     		movs	r1, #6
+ 233 000c 7A68     		ldr	r2, [r7, #4]
+ 234 000e FFF7FEFF 		bl	spi_dma_send
+ 140:App/STM32F4-Discovery/W5200.c **** }
+ 235              		.loc 1 140 0
+ 236 0012 0837     		adds	r7, r7, #8
+ 237 0014 BD46     		mov	sp, r7
+ 238              		@ sp needed
+ 239 0016 80BD     		pop	{r7, pc}
+ 240              		.cfi_endproc
+ 241              	.LFE111:
+ 243              		.section	.text.wiznet_get_hardware_address,"ax",%progbits
+ 244              		.align	2
+ 245              		.global	wiznet_get_hardware_address
+ 246              		.thumb
+ 247              		.thumb_func
+ 249              	wiznet_get_hardware_address:
+ 250              	.LFB112:
+ 141:App/STM32F4-Discovery/W5200.c **** 
+ 142:App/STM32F4-Discovery/W5200.c **** void  wiznet_get_hardware_address(macaddress_t address)
+ 143:App/STM32F4-Discovery/W5200.c **** {
+ 251              		.loc 1 143 0
+ 252              		.cfi_startproc
+ 253              		@ args = 0, pretend = 0, frame = 8
+ 254              		@ frame_needed = 1, uses_anonymous_args = 0
+ 255 0000 80B5     		push	{r7, lr}
+ 256              	.LCFI6:
+ 257              		.cfi_def_cfa_offset 8
+ 258              		.cfi_offset 7, -8
+ 259              		.cfi_offset 14, -4
+ 260 0002 82B0     		sub	sp, sp, #8
+ 261              	.LCFI7:
+ 262              		.cfi_def_cfa_offset 16
+ 263 0004 00AF     		add	r7, sp, #0
+ 264              	.LCFI8:
+ 265              		.cfi_def_cfa_register 7
+ 266 0006 7860     		str	r0, [r7, #4]
+ 144:App/STM32F4-Discovery/W5200.c **** 
+ 145:App/STM32F4-Discovery/W5200.c **** 	spi_dma_read(W5200_SHAR, 6);
+ 267              		.loc 1 145 0
+ 268 0008 0920     		movs	r0, #9
+ 269 000a 0621     		movs	r1, #6
+ 270 000c FFF7FEFF 		bl	spi_dma_read
+ 146:App/STM32F4-Discovery/W5200.c **** 	memcpy(address, bufferRX+4, 6);
+ 271              		.loc 1 146 0
+ 272 0010 7868     		ldr	r0, [r7, #4]
+ 273 0012 0349     		ldr	r1, .L8
+ 274 0014 0622     		movs	r2, #6
+ 275 0016 FFF7FEFF 		bl	memcpy
+ 147:App/STM32F4-Discovery/W5200.c **** }
+ 276              		.loc 1 147 0
+ 277 001a 0837     		adds	r7, r7, #8
+ 278 001c BD46     		mov	sp, r7
+ 279              		@ sp needed
+ 280 001e 80BD     		pop	{r7, pc}
+ 281              	.L9:
+ 282              		.align	2
+ 283              	.L8:
+ 284 0020 04000000 		.word	bufferRX+4
+ 285              		.cfi_endproc
+ 286              	.LFE112:
+ 288              		.section	.text.wiznet_configure_network,"ax",%progbits
+ 289              		.align	2
+ 290              		.global	wiznet_configure_network
+ 291              		.thumb
+ 292              		.thumb_func
+ 294              	wiznet_configure_network:
+ 295              	.LFB113:
+ 148:App/STM32F4-Discovery/W5200.c **** 
+ 149:App/STM32F4-Discovery/W5200.c **** void  wiznet_configure_network(const ipv4address_t address,
+ 150:App/STM32F4-Discovery/W5200.c ****                              const ipv4address_t subnet,
+ 151:App/STM32F4-Discovery/W5200.c ****                              const ipv4address_t gateway)
+ 152:App/STM32F4-Discovery/W5200.c **** {
+ 296              		.loc 1 152 0
+ 297              		.cfi_startproc
+ 298              		@ args = 0, pretend = 0, frame = 16
+ 299              		@ frame_needed = 1, uses_anonymous_args = 0
+ 300 0000 80B5     		push	{r7, lr}
+ 301              	.LCFI9:
+ 302              		.cfi_def_cfa_offset 8
+ 303              		.cfi_offset 7, -8
+ 304              		.cfi_offset 14, -4
+ 305 0002 84B0     		sub	sp, sp, #16
+ 306              	.LCFI10:
+ 307              		.cfi_def_cfa_offset 24
+ 308 0004 00AF     		add	r7, sp, #0
+ 309              	.LCFI11:
+ 310              		.cfi_def_cfa_register 7
+ 311 0006 F860     		str	r0, [r7, #12]
+ 312 0008 B960     		str	r1, [r7, #8]
+ 313 000a 7A60     		str	r2, [r7, #4]
+ 153:App/STM32F4-Discovery/W5200.c **** 	spi_dma_send(W5200_SIPR, 4, address);
+ 314              		.loc 1 153 0
+ 315 000c 0F20     		movs	r0, #15
+ 316 000e 0421     		movs	r1, #4
+ 317 0010 FA68     		ldr	r2, [r7, #12]
+ 318 0012 FFF7FEFF 		bl	spi_dma_send
+ 154:App/STM32F4-Discovery/W5200.c **** 	spi_dma_send(W5200_SUBR, 4, subnet);
+ 319              		.loc 1 154 0
+ 320 0016 0520     		movs	r0, #5
+ 321 0018 0421     		movs	r1, #4
+ 322 001a BA68     		ldr	r2, [r7, #8]
+ 323 001c FFF7FEFF 		bl	spi_dma_send
+ 155:App/STM32F4-Discovery/W5200.c **** 	spi_dma_send(W5200_GAR, 4 , gateway);
+ 324              		.loc 1 155 0
+ 325 0020 0120     		movs	r0, #1
+ 326 0022 0421     		movs	r1, #4
+ 327 0024 7A68     		ldr	r2, [r7, #4]
+ 328 0026 FFF7FEFF 		bl	spi_dma_send
+ 156:App/STM32F4-Discovery/W5200.c **** }
+ 329              		.loc 1 156 0
+ 330 002a 1037     		adds	r7, r7, #16
+ 331 002c BD46     		mov	sp, r7
+ 332              		@ sp needed
+ 333 002e 80BD     		pop	{r7, pc}
+ 334              		.cfi_endproc
+ 335              	.LFE113:
+ 337              		.section	.text.wiznet_get_ipaddress,"ax",%progbits
+ 338              		.align	2
+ 339              		.global	wiznet_get_ipaddress
+ 340              		.thumb
+ 341              		.thumb_func
+ 343              	wiznet_get_ipaddress:
+ 344              	.LFB114:
+ 157:App/STM32F4-Discovery/W5200.c **** 
+ 158:App/STM32F4-Discovery/W5200.c **** void  wiznet_get_ipaddress(ipv4address_t address)
+ 159:App/STM32F4-Discovery/W5200.c **** {
+ 345              		.loc 1 159 0
+ 346              		.cfi_startproc
+ 347              		@ args = 0, pretend = 0, frame = 8
+ 348              		@ frame_needed = 1, uses_anonymous_args = 0
+ 349 0000 80B5     		push	{r7, lr}
+ 350              	.LCFI12:
+ 351              		.cfi_def_cfa_offset 8
+ 352              		.cfi_offset 7, -8
+ 353              		.cfi_offset 14, -4
+ 354 0002 82B0     		sub	sp, sp, #8
+ 355              	.LCFI13:
+ 356              		.cfi_def_cfa_offset 16
+ 357 0004 00AF     		add	r7, sp, #0
+ 358              	.LCFI14:
+ 359              		.cfi_def_cfa_register 7
+ 360 0006 7860     		str	r0, [r7, #4]
+ 160:App/STM32F4-Discovery/W5200.c **** 	 spi_dma_read(W5200_SIPR, 4);
+ 361              		.loc 1 160 0
+ 362 0008 0F20     		movs	r0, #15
+ 363 000a 0421     		movs	r1, #4
+ 364 000c FFF7FEFF 		bl	spi_dma_read
+ 161:App/STM32F4-Discovery/W5200.c **** 	memcpy(address, bufferRX+4, 4);
+ 365              		.loc 1 161 0
+ 366 0010 7868     		ldr	r0, [r7, #4]
+ 367 0012 0349     		ldr	r1, .L12
+ 368 0014 0422     		movs	r2, #4
+ 369 0016 FFF7FEFF 		bl	memcpy
+ 162:App/STM32F4-Discovery/W5200.c **** }
+ 370              		.loc 1 162 0
+ 371 001a 0837     		adds	r7, r7, #8
+ 372 001c BD46     		mov	sp, r7
+ 373              		@ sp needed
+ 374 001e 80BD     		pop	{r7, pc}
+ 375              	.L13:
+ 376              		.align	2
+ 377              	.L12:
+ 378 0020 04000000 		.word	bufferRX+4
+ 379              		.cfi_endproc
+ 380              	.LFE114:
+ 382              		.section	.text.get_CRStatus,"ax",%progbits
+ 383              		.align	2
+ 384              		.global	get_CRStatus
+ 385              		.thumb
+ 386              		.thumb_func
+ 388              	get_CRStatus:
+ 389              	.LFB115:
+ 163:App/STM32F4-Discovery/W5200.c **** 
+ 164:App/STM32F4-Discovery/W5200.c **** 
+ 165:App/STM32F4-Discovery/W5200.c **** 
+ 166:App/STM32F4-Discovery/W5200.c **** uint8_t get_CRStatus(uint8_t sck_fd)
+ 167:App/STM32F4-Discovery/W5200.c **** {
+ 390              		.loc 1 167 0
+ 391              		.cfi_startproc
+ 392              		@ args = 0, pretend = 0, frame = 16
+ 393              		@ frame_needed = 1, uses_anonymous_args = 0
+ 394 0000 80B5     		push	{r7, lr}
+ 395              	.LCFI15:
+ 396              		.cfi_def_cfa_offset 8
+ 397              		.cfi_offset 7, -8
+ 398              		.cfi_offset 14, -4
+ 399 0002 84B0     		sub	sp, sp, #16
+ 400              	.LCFI16:
+ 401              		.cfi_def_cfa_offset 24
+ 402 0004 00AF     		add	r7, sp, #0
+ 403              	.LCFI17:
+ 404              		.cfi_def_cfa_register 7
+ 405 0006 0346     		mov	r3, r0
+ 406 0008 FB71     		strb	r3, [r7, #7]
+ 168:App/STM32F4-Discovery/W5200.c **** 	uint8_t var; 
+ 169:App/STM32F4-Discovery/W5200.c **** 	spi_dma_read(W5200_Sn_CR(sck_fd),1);
+ 407              		.loc 1 169 0
+ 408 000a FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 409 000c 9BB2     		uxth	r3, r3
+ 410 000e 1B02     		lsls	r3, r3, #8
+ 411 0010 9BB2     		uxth	r3, r3
+ 412 0012 03F58043 		add	r3, r3, #16384
+ 413 0016 0133     		adds	r3, r3, #1
+ 414 0018 9BB2     		uxth	r3, r3
+ 415 001a 1846     		mov	r0, r3
+ 416 001c 0121     		movs	r1, #1
+ 417 001e FFF7FEFF 		bl	spi_dma_read
+ 170:App/STM32F4-Discovery/W5200.c **** 	memcpy(&var, bufferRX+4, 1);
+ 418              		.loc 1 170 0
+ 419 0022 044B     		ldr	r3, .L16
+ 420 0024 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 421 0026 FB73     		strb	r3, [r7, #15]
+ 171:App/STM32F4-Discovery/W5200.c **** 	return var;
+ 422              		.loc 1 171 0
+ 423 0028 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 172:App/STM32F4-Discovery/W5200.c **** }
+ 424              		.loc 1 172 0
+ 425 002a 1846     		mov	r0, r3
+ 426 002c 1037     		adds	r7, r7, #16
+ 427 002e BD46     		mov	sp, r7
+ 428              		@ sp needed
+ 429 0030 80BD     		pop	{r7, pc}
+ 430              	.L17:
+ 431 0032 00BF     		.align	2
+ 432              	.L16:
+ 433 0034 04000000 		.word	bufferRX+4
+ 434              		.cfi_endproc
+ 435              	.LFE115:
+ 437              		.section	.text.get_SRStatus,"ax",%progbits
+ 438              		.align	2
+ 439              		.global	get_SRStatus
+ 440              		.thumb
+ 441              		.thumb_func
+ 443              	get_SRStatus:
+ 444              	.LFB116:
+ 173:App/STM32F4-Discovery/W5200.c **** 
+ 174:App/STM32F4-Discovery/W5200.c **** 
+ 175:App/STM32F4-Discovery/W5200.c **** uint8_t get_SRStatus(uint8_t sck_fd)
+ 176:App/STM32F4-Discovery/W5200.c **** {
+ 445              		.loc 1 176 0
+ 446              		.cfi_startproc
+ 447              		@ args = 0, pretend = 0, frame = 16
+ 448              		@ frame_needed = 1, uses_anonymous_args = 0
+ 449 0000 80B5     		push	{r7, lr}
+ 450              	.LCFI18:
+ 451              		.cfi_def_cfa_offset 8
+ 452              		.cfi_offset 7, -8
+ 453              		.cfi_offset 14, -4
+ 454 0002 84B0     		sub	sp, sp, #16
+ 455              	.LCFI19:
+ 456              		.cfi_def_cfa_offset 24
+ 457 0004 00AF     		add	r7, sp, #0
+ 458              	.LCFI20:
+ 459              		.cfi_def_cfa_register 7
+ 460 0006 0346     		mov	r3, r0
+ 461 0008 FB71     		strb	r3, [r7, #7]
+ 177:App/STM32F4-Discovery/W5200.c **** 	uint8_t var; 
+ 178:App/STM32F4-Discovery/W5200.c **** 	spi_dma_read(W5200_Sn_SR(sck_fd), 1);
+ 462              		.loc 1 178 0
+ 463 000a FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 464 000c 9BB2     		uxth	r3, r3
+ 465 000e 1B02     		lsls	r3, r3, #8
+ 466 0010 9BB2     		uxth	r3, r3
+ 467 0012 03F58043 		add	r3, r3, #16384
+ 468 0016 0333     		adds	r3, r3, #3
+ 469 0018 9BB2     		uxth	r3, r3
+ 470 001a 1846     		mov	r0, r3
+ 471 001c 0121     		movs	r1, #1
+ 472 001e FFF7FEFF 		bl	spi_dma_read
+ 179:App/STM32F4-Discovery/W5200.c **** 	memcpy(&var, bufferRX+4, 1);
+ 473              		.loc 1 179 0
+ 474 0022 044B     		ldr	r3, .L20
+ 475 0024 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 476 0026 FB73     		strb	r3, [r7, #15]
+ 180:App/STM32F4-Discovery/W5200.c **** 	return var;
+ 477              		.loc 1 180 0
+ 478 0028 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 181:App/STM32F4-Discovery/W5200.c **** }
+ 479              		.loc 1 181 0
+ 480 002a 1846     		mov	r0, r3
+ 481 002c 1037     		adds	r7, r7, #16
+ 482 002e BD46     		mov	sp, r7
+ 483              		@ sp needed
+ 484 0030 80BD     		pop	{r7, pc}
+ 485              	.L21:
+ 486 0032 00BF     		.align	2
+ 487              	.L20:
+ 488 0034 04000000 		.word	bufferRX+4
+ 489              		.cfi_endproc
+ 490              	.LFE116:
+ 492              		.section	.text.get_TXFSRStatus,"ax",%progbits
+ 493              		.align	2
+ 494              		.global	get_TXFSRStatus
+ 495              		.thumb
+ 496              		.thumb_func
+ 498              	get_TXFSRStatus:
+ 499              	.LFB117:
+ 182:App/STM32F4-Discovery/W5200.c **** 
+ 183:App/STM32F4-Discovery/W5200.c **** uint16_t get_TXFSRStatus(uint8_t sck_fd)
+ 184:App/STM32F4-Discovery/W5200.c **** {
+ 500              		.loc 1 184 0
+ 501              		.cfi_startproc
+ 502              		@ args = 0, pretend = 0, frame = 16
+ 503              		@ frame_needed = 1, uses_anonymous_args = 0
+ 504 0000 80B5     		push	{r7, lr}
+ 505              	.LCFI21:
+ 506              		.cfi_def_cfa_offset 8
+ 507              		.cfi_offset 7, -8
+ 508              		.cfi_offset 14, -4
+ 509 0002 84B0     		sub	sp, sp, #16
+ 510              	.LCFI22:
+ 511              		.cfi_def_cfa_offset 24
+ 512 0004 00AF     		add	r7, sp, #0
+ 513              	.LCFI23:
+ 514              		.cfi_def_cfa_register 7
+ 515 0006 0346     		mov	r3, r0
+ 516 0008 FB71     		strb	r3, [r7, #7]
+ 185:App/STM32F4-Discovery/W5200.c **** 	uint8_t var[2]; 
+ 186:App/STM32F4-Discovery/W5200.c **** 	spi_dma_read(W5200_Sn_TX_FSR(sck_fd), 2);
+ 517              		.loc 1 186 0
+ 518 000a FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 519 000c 9BB2     		uxth	r3, r3
+ 520 000e 1B02     		lsls	r3, r3, #8
+ 521 0010 9BB2     		uxth	r3, r3
+ 522 0012 03F58043 		add	r3, r3, #16384
+ 523 0016 2033     		adds	r3, r3, #32
+ 524 0018 9BB2     		uxth	r3, r3
+ 525 001a 1846     		mov	r0, r3
+ 526 001c 0221     		movs	r1, #2
+ 527 001e FFF7FEFF 		bl	spi_dma_read
+ 187:App/STM32F4-Discovery/W5200.c **** 	memcpy(&var, bufferRX+4, 2);
+ 528              		.loc 1 187 0
+ 529 0022 084A     		ldr	r2, .L24
+ 530 0024 07F10C03 		add	r3, r7, #12
+ 531 0028 1288     		ldrh	r2, [r2]	@ unaligned
+ 532 002a 1A80     		strh	r2, [r3]	@ unaligned
+ 188:App/STM32F4-Discovery/W5200.c **** 	
+ 189:App/STM32F4-Discovery/W5200.c **** 	return ((var[0] << 8) | var[1] );
+ 533              		.loc 1 189 0
+ 534 002c 3B7B     		ldrb	r3, [r7, #12]	@ zero_extendqisi2
+ 535 002e 1B02     		lsls	r3, r3, #8
+ 536 0030 9AB2     		uxth	r2, r3
+ 537 0032 7B7B     		ldrb	r3, [r7, #13]	@ zero_extendqisi2
+ 538 0034 1343     		orrs	r3, r3, r2
+ 539 0036 9BB2     		uxth	r3, r3
+ 540 0038 9BB2     		uxth	r3, r3
+ 190:App/STM32F4-Discovery/W5200.c **** 	
+ 191:App/STM32F4-Discovery/W5200.c **** }
+ 541              		.loc 1 191 0
+ 542 003a 1846     		mov	r0, r3
+ 543 003c 1037     		adds	r7, r7, #16
+ 544 003e BD46     		mov	sp, r7
+ 545              		@ sp needed
+ 546 0040 80BD     		pop	{r7, pc}
+ 547              	.L25:
+ 548 0042 00BF     		.align	2
+ 549              	.L24:
+ 550 0044 04000000 		.word	bufferRX+4
+ 551              		.cfi_endproc
+ 552              	.LFE117:
+ 554              		.section	.text.get_TXWRStatus,"ax",%progbits
+ 555              		.align	2
+ 556              		.global	get_TXWRStatus
+ 557              		.thumb
+ 558              		.thumb_func
+ 560              	get_TXWRStatus:
+ 561              	.LFB118:
+ 192:App/STM32F4-Discovery/W5200.c **** 
+ 193:App/STM32F4-Discovery/W5200.c **** uint16_t get_TXWRStatus(uint8_t sck_fd)
+ 194:App/STM32F4-Discovery/W5200.c **** {
+ 562              		.loc 1 194 0
+ 563              		.cfi_startproc
+ 564              		@ args = 0, pretend = 0, frame = 16
+ 565              		@ frame_needed = 1, uses_anonymous_args = 0
+ 566 0000 80B5     		push	{r7, lr}
+ 567              	.LCFI24:
+ 568              		.cfi_def_cfa_offset 8
+ 569              		.cfi_offset 7, -8
+ 570              		.cfi_offset 14, -4
+ 571 0002 84B0     		sub	sp, sp, #16
+ 572              	.LCFI25:
+ 573              		.cfi_def_cfa_offset 24
+ 574 0004 00AF     		add	r7, sp, #0
+ 575              	.LCFI26:
+ 576              		.cfi_def_cfa_register 7
+ 577 0006 0346     		mov	r3, r0
+ 578 0008 FB71     		strb	r3, [r7, #7]
+ 195:App/STM32F4-Discovery/W5200.c **** 	uint8_t var[2]; 
+ 196:App/STM32F4-Discovery/W5200.c **** 	spi_dma_read(W5200_Sn_TX_WR(sck_fd), 2 );
+ 579              		.loc 1 196 0
+ 580 000a FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 581 000c 9BB2     		uxth	r3, r3
+ 582 000e 1B02     		lsls	r3, r3, #8
+ 583 0010 9BB2     		uxth	r3, r3
+ 584 0012 03F58043 		add	r3, r3, #16384
+ 585 0016 2433     		adds	r3, r3, #36
+ 586 0018 9BB2     		uxth	r3, r3
+ 587 001a 1846     		mov	r0, r3
+ 588 001c 0221     		movs	r1, #2
+ 589 001e FFF7FEFF 		bl	spi_dma_read
+ 197:App/STM32F4-Discovery/W5200.c **** 	memcpy(&var, bufferRX+4, 2);
+ 590              		.loc 1 197 0
+ 591 0022 084A     		ldr	r2, .L28
+ 592 0024 07F10C03 		add	r3, r7, #12
+ 593 0028 1288     		ldrh	r2, [r2]	@ unaligned
+ 594 002a 1A80     		strh	r2, [r3]	@ unaligned
+ 198:App/STM32F4-Discovery/W5200.c **** 	
+ 199:App/STM32F4-Discovery/W5200.c **** 	return ((var[0] << 8) | var[1] );
+ 595              		.loc 1 199 0
+ 596 002c 3B7B     		ldrb	r3, [r7, #12]	@ zero_extendqisi2
+ 597 002e 1B02     		lsls	r3, r3, #8
+ 598 0030 9AB2     		uxth	r2, r3
+ 599 0032 7B7B     		ldrb	r3, [r7, #13]	@ zero_extendqisi2
+ 600 0034 1343     		orrs	r3, r3, r2
+ 601 0036 9BB2     		uxth	r3, r3
+ 602 0038 9BB2     		uxth	r3, r3
+ 200:App/STM32F4-Discovery/W5200.c **** 
+ 201:App/STM32F4-Discovery/W5200.c **** 	
+ 202:App/STM32F4-Discovery/W5200.c **** }
+ 603              		.loc 1 202 0
+ 604 003a 1846     		mov	r0, r3
+ 605 003c 1037     		adds	r7, r7, #16
+ 606 003e BD46     		mov	sp, r7
+ 607              		@ sp needed
+ 608 0040 80BD     		pop	{r7, pc}
+ 609              	.L29:
+ 610 0042 00BF     		.align	2
+ 611              	.L28:
+ 612 0044 04000000 		.word	bufferRX+4
+ 613              		.cfi_endproc
+ 614              	.LFE118:
+ 616              		.section	.text.get_TXRD,"ax",%progbits
+ 617              		.align	2
+ 618              		.global	get_TXRD
+ 619              		.thumb
+ 620              		.thumb_func
+ 622              	get_TXRD:
+ 623              	.LFB119:
+ 203:App/STM32F4-Discovery/W5200.c **** uint16_t get_TXRD(uint8_t sck_fd)
+ 204:App/STM32F4-Discovery/W5200.c **** {
+ 624              		.loc 1 204 0
+ 625              		.cfi_startproc
+ 626              		@ args = 0, pretend = 0, frame = 16
+ 627              		@ frame_needed = 1, uses_anonymous_args = 0
+ 628 0000 80B5     		push	{r7, lr}
+ 629              	.LCFI27:
+ 630              		.cfi_def_cfa_offset 8
+ 631              		.cfi_offset 7, -8
+ 632              		.cfi_offset 14, -4
+ 633 0002 84B0     		sub	sp, sp, #16
+ 634              	.LCFI28:
+ 635              		.cfi_def_cfa_offset 24
+ 636 0004 00AF     		add	r7, sp, #0
+ 637              	.LCFI29:
+ 638              		.cfi_def_cfa_register 7
+ 639 0006 0346     		mov	r3, r0
+ 640 0008 FB71     		strb	r3, [r7, #7]
+ 205:App/STM32F4-Discovery/W5200.c **** 	uint8_t var[2]; 
+ 206:App/STM32F4-Discovery/W5200.c **** 	spi_dma_read(W5200_Sn_TX_RD(sck_fd), 2);
+ 641              		.loc 1 206 0
+ 642 000a FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 643 000c 9BB2     		uxth	r3, r3
+ 644 000e 1B02     		lsls	r3, r3, #8
+ 645 0010 9BB2     		uxth	r3, r3
+ 646 0012 03F58043 		add	r3, r3, #16384
+ 647 0016 2233     		adds	r3, r3, #34
+ 648 0018 9BB2     		uxth	r3, r3
+ 649 001a 1846     		mov	r0, r3
+ 650 001c 0221     		movs	r1, #2
+ 651 001e FFF7FEFF 		bl	spi_dma_read
+ 207:App/STM32F4-Discovery/W5200.c **** 	memcpy(&var, bufferRX+4, 2);
+ 652              		.loc 1 207 0
+ 653 0022 084A     		ldr	r2, .L32
+ 654 0024 07F10C03 		add	r3, r7, #12
+ 655 0028 1288     		ldrh	r2, [r2]	@ unaligned
+ 656 002a 1A80     		strh	r2, [r3]	@ unaligned
+ 208:App/STM32F4-Discovery/W5200.c **** 	
+ 209:App/STM32F4-Discovery/W5200.c **** 	return ((var[0] << 8) | var[1] );
+ 657              		.loc 1 209 0
+ 658 002c 3B7B     		ldrb	r3, [r7, #12]	@ zero_extendqisi2
+ 659 002e 1B02     		lsls	r3, r3, #8
+ 660 0030 9AB2     		uxth	r2, r3
+ 661 0032 7B7B     		ldrb	r3, [r7, #13]	@ zero_extendqisi2
+ 662 0034 1343     		orrs	r3, r3, r2
+ 663 0036 9BB2     		uxth	r3, r3
+ 664 0038 9BB2     		uxth	r3, r3
+ 210:App/STM32F4-Discovery/W5200.c **** 	
+ 211:App/STM32F4-Discovery/W5200.c **** }
+ 665              		.loc 1 211 0
+ 666 003a 1846     		mov	r0, r3
+ 667 003c 1037     		adds	r7, r7, #16
+ 668 003e BD46     		mov	sp, r7
+ 669              		@ sp needed
+ 670 0040 80BD     		pop	{r7, pc}
+ 671              	.L33:
+ 672 0042 00BF     		.align	2
+ 673              	.L32:
+ 674 0044 04000000 		.word	bufferRX+4
+ 675              		.cfi_endproc
+ 676              	.LFE119:
+ 678              		.section	.text.set_TXWR,"ax",%progbits
+ 679              		.align	2
+ 680              		.global	set_TXWR
+ 681              		.thumb
+ 682              		.thumb_func
+ 684              	set_TXWR:
+ 685              	.LFB120:
+ 212:App/STM32F4-Discovery/W5200.c **** 
+ 213:App/STM32F4-Discovery/W5200.c **** void  set_TXWR(uint8_t sck_fd, uint16_t val)
+ 214:App/STM32F4-Discovery/W5200.c **** {
+ 686              		.loc 1 214 0
+ 687              		.cfi_startproc
+ 688              		@ args = 0, pretend = 0, frame = 8
+ 689              		@ frame_needed = 1, uses_anonymous_args = 0
+ 690 0000 80B5     		push	{r7, lr}
+ 691              	.LCFI30:
+ 692              		.cfi_def_cfa_offset 8
+ 693              		.cfi_offset 7, -8
+ 694              		.cfi_offset 14, -4
+ 695 0002 82B0     		sub	sp, sp, #8
+ 696              	.LCFI31:
+ 697              		.cfi_def_cfa_offset 16
+ 698 0004 00AF     		add	r7, sp, #0
+ 699              	.LCFI32:
+ 700              		.cfi_def_cfa_register 7
+ 701 0006 0246     		mov	r2, r0
+ 702 0008 0B46     		mov	r3, r1
+ 703 000a FA71     		strb	r2, [r7, #7]
+ 704 000c BB80     		strh	r3, [r7, #4]	@ movhi
+ 215:App/STM32F4-Discovery/W5200.c ****  	spi_dma_send2B(W5200_Sn_TX_WR(sck_fd), val);
+ 705              		.loc 1 215 0
+ 706 000e FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 707 0010 9BB2     		uxth	r3, r3
+ 708 0012 1B02     		lsls	r3, r3, #8
+ 709 0014 9BB2     		uxth	r3, r3
+ 710 0016 03F58043 		add	r3, r3, #16384
+ 711 001a 2433     		adds	r3, r3, #36
+ 712 001c 9AB2     		uxth	r2, r3
+ 713 001e BB88     		ldrh	r3, [r7, #4]
+ 714 0020 1046     		mov	r0, r2
+ 715 0022 1946     		mov	r1, r3
+ 716 0024 FFF7FEFF 		bl	spi_dma_send2B
+ 216:App/STM32F4-Discovery/W5200.c **** }
+ 717              		.loc 1 216 0
+ 718 0028 0837     		adds	r7, r7, #8
+ 719 002a BD46     		mov	sp, r7
+ 720              		@ sp needed
+ 721 002c 80BD     		pop	{r7, pc}
+ 722              		.cfi_endproc
+ 723              	.LFE120:
+ 725 002e 00BF     		.section	.text.get_RXRSR,"ax",%progbits
+ 726              		.align	2
+ 727              		.global	get_RXRSR
+ 728              		.thumb
+ 729              		.thumb_func
+ 731              	get_RXRSR:
+ 732              	.LFB121:
+ 217:App/STM32F4-Discovery/W5200.c **** 
+ 218:App/STM32F4-Discovery/W5200.c **** uint16_t get_RXRSR(uint8_t sck_fd)
+ 219:App/STM32F4-Discovery/W5200.c **** {
+ 733              		.loc 1 219 0
+ 734              		.cfi_startproc
+ 735              		@ args = 0, pretend = 0, frame = 16
+ 736              		@ frame_needed = 1, uses_anonymous_args = 0
+ 737 0000 80B5     		push	{r7, lr}
+ 738              	.LCFI33:
+ 739              		.cfi_def_cfa_offset 8
+ 740              		.cfi_offset 7, -8
+ 741              		.cfi_offset 14, -4
+ 742 0002 84B0     		sub	sp, sp, #16
+ 743              	.LCFI34:
+ 744              		.cfi_def_cfa_offset 24
+ 745 0004 00AF     		add	r7, sp, #0
+ 746              	.LCFI35:
+ 747              		.cfi_def_cfa_register 7
+ 748 0006 0346     		mov	r3, r0
+ 749 0008 FB71     		strb	r3, [r7, #7]
+ 220:App/STM32F4-Discovery/W5200.c **** 	uint8_t var[2]; 
+ 221:App/STM32F4-Discovery/W5200.c **** 	spi_dma_read(W5200_Sn_RX_RSR(sck_fd), 2);
+ 750              		.loc 1 221 0
+ 751 000a FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 752 000c 9BB2     		uxth	r3, r3
+ 753 000e 1B02     		lsls	r3, r3, #8
+ 754 0010 9BB2     		uxth	r3, r3
+ 755 0012 03F58043 		add	r3, r3, #16384
+ 756 0016 2633     		adds	r3, r3, #38
+ 757 0018 9BB2     		uxth	r3, r3
+ 758 001a 1846     		mov	r0, r3
+ 759 001c 0221     		movs	r1, #2
+ 760 001e FFF7FEFF 		bl	spi_dma_read
+ 222:App/STM32F4-Discovery/W5200.c **** 	memcpy(&var, bufferRX+4, 2);
+ 761              		.loc 1 222 0
+ 762 0022 084A     		ldr	r2, .L37
+ 763 0024 07F10C03 		add	r3, r7, #12
+ 764 0028 1288     		ldrh	r2, [r2]	@ unaligned
+ 765 002a 1A80     		strh	r2, [r3]	@ unaligned
+ 223:App/STM32F4-Discovery/W5200.c **** 	
+ 224:App/STM32F4-Discovery/W5200.c **** 	return ((var[0] << 8) | var[1] );
+ 766              		.loc 1 224 0
+ 767 002c 3B7B     		ldrb	r3, [r7, #12]	@ zero_extendqisi2
+ 768 002e 1B02     		lsls	r3, r3, #8
+ 769 0030 9AB2     		uxth	r2, r3
+ 770 0032 7B7B     		ldrb	r3, [r7, #13]	@ zero_extendqisi2
+ 771 0034 1343     		orrs	r3, r3, r2
+ 772 0036 9BB2     		uxth	r3, r3
+ 773 0038 9BB2     		uxth	r3, r3
+ 225:App/STM32F4-Discovery/W5200.c **** 
+ 226:App/STM32F4-Discovery/W5200.c **** }
+ 774              		.loc 1 226 0
+ 775 003a 1846     		mov	r0, r3
+ 776 003c 1037     		adds	r7, r7, #16
+ 777 003e BD46     		mov	sp, r7
+ 778              		@ sp needed
+ 779 0040 80BD     		pop	{r7, pc}
+ 780              	.L38:
+ 781 0042 00BF     		.align	2
+ 782              	.L37:
+ 783 0044 04000000 		.word	bufferRX+4
+ 784              		.cfi_endproc
+ 785              	.LFE121:
+ 787              		.section	.text.get_RXRD,"ax",%progbits
+ 788              		.align	2
+ 789              		.global	get_RXRD
+ 790              		.thumb
+ 791              		.thumb_func
+ 793              	get_RXRD:
+ 794              	.LFB122:
+ 227:App/STM32F4-Discovery/W5200.c **** 
+ 228:App/STM32F4-Discovery/W5200.c **** uint16_t get_RXRD(uint8_t sck_fd)
+ 229:App/STM32F4-Discovery/W5200.c **** {
+ 795              		.loc 1 229 0
+ 796              		.cfi_startproc
+ 797              		@ args = 0, pretend = 0, frame = 16
+ 798              		@ frame_needed = 1, uses_anonymous_args = 0
+ 799 0000 80B5     		push	{r7, lr}
+ 800              	.LCFI36:
+ 801              		.cfi_def_cfa_offset 8
+ 802              		.cfi_offset 7, -8
+ 803              		.cfi_offset 14, -4
+ 804 0002 84B0     		sub	sp, sp, #16
+ 805              	.LCFI37:
+ 806              		.cfi_def_cfa_offset 24
+ 807 0004 00AF     		add	r7, sp, #0
+ 808              	.LCFI38:
+ 809              		.cfi_def_cfa_register 7
+ 810 0006 0346     		mov	r3, r0
+ 811 0008 FB71     		strb	r3, [r7, #7]
+ 230:App/STM32F4-Discovery/W5200.c **** 	uint8_t var[2]; 
+ 231:App/STM32F4-Discovery/W5200.c **** 	spi_dma_read(W5200_Sn_RX_RD(sck_fd), 2 );
+ 812              		.loc 1 231 0
+ 813 000a FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 814 000c 9BB2     		uxth	r3, r3
+ 815 000e 1B02     		lsls	r3, r3, #8
+ 816 0010 9BB2     		uxth	r3, r3
+ 817 0012 03F58043 		add	r3, r3, #16384
+ 818 0016 2833     		adds	r3, r3, #40
+ 819 0018 9BB2     		uxth	r3, r3
+ 820 001a 1846     		mov	r0, r3
+ 821 001c 0221     		movs	r1, #2
+ 822 001e FFF7FEFF 		bl	spi_dma_read
+ 232:App/STM32F4-Discovery/W5200.c **** 	memcpy(&var, bufferRX+4, 2);
+ 823              		.loc 1 232 0
+ 824 0022 084A     		ldr	r2, .L41
+ 825 0024 07F10C03 		add	r3, r7, #12
+ 826 0028 1288     		ldrh	r2, [r2]	@ unaligned
+ 827 002a 1A80     		strh	r2, [r3]	@ unaligned
+ 233:App/STM32F4-Discovery/W5200.c **** 	
+ 234:App/STM32F4-Discovery/W5200.c **** 	return ((var[0] << 8) | var[1] );
+ 828              		.loc 1 234 0
+ 829 002c 3B7B     		ldrb	r3, [r7, #12]	@ zero_extendqisi2
+ 830 002e 1B02     		lsls	r3, r3, #8
+ 831 0030 9AB2     		uxth	r2, r3
+ 832 0032 7B7B     		ldrb	r3, [r7, #13]	@ zero_extendqisi2
+ 833 0034 1343     		orrs	r3, r3, r2
+ 834 0036 9BB2     		uxth	r3, r3
+ 835 0038 9BB2     		uxth	r3, r3
+ 235:App/STM32F4-Discovery/W5200.c **** }
+ 836              		.loc 1 235 0
+ 837 003a 1846     		mov	r0, r3
+ 838 003c 1037     		adds	r7, r7, #16
+ 839 003e BD46     		mov	sp, r7
+ 840              		@ sp needed
+ 841 0040 80BD     		pop	{r7, pc}
+ 842              	.L42:
+ 843 0042 00BF     		.align	2
+ 844              	.L41:
+ 845 0044 04000000 		.word	bufferRX+4
+ 846              		.cfi_endproc
+ 847              	.LFE122:
+ 849              		.section	.text.set_RXRD,"ax",%progbits
+ 850              		.align	2
+ 851              		.global	set_RXRD
+ 852              		.thumb
+ 853              		.thumb_func
+ 855              	set_RXRD:
+ 856              	.LFB123:
+ 236:App/STM32F4-Discovery/W5200.c **** 
+ 237:App/STM32F4-Discovery/W5200.c **** void set_RXRD(uint8_t sck_fd, uint16_t val)
+ 238:App/STM32F4-Discovery/W5200.c **** {
+ 857              		.loc 1 238 0
+ 858              		.cfi_startproc
+ 859              		@ args = 0, pretend = 0, frame = 8
+ 860              		@ frame_needed = 1, uses_anonymous_args = 0
+ 861 0000 80B5     		push	{r7, lr}
+ 862              	.LCFI39:
+ 863              		.cfi_def_cfa_offset 8
+ 864              		.cfi_offset 7, -8
+ 865              		.cfi_offset 14, -4
+ 866 0002 82B0     		sub	sp, sp, #8
+ 867              	.LCFI40:
+ 868              		.cfi_def_cfa_offset 16
+ 869 0004 00AF     		add	r7, sp, #0
+ 870              	.LCFI41:
+ 871              		.cfi_def_cfa_register 7
+ 872 0006 0246     		mov	r2, r0
+ 873 0008 0B46     		mov	r3, r1
+ 874 000a FA71     		strb	r2, [r7, #7]
+ 875 000c BB80     		strh	r3, [r7, #4]	@ movhi
+ 239:App/STM32F4-Discovery/W5200.c **** 	spi_dma_send2B(W5200_Sn_RX_RD(sck_fd), val);
+ 876              		.loc 1 239 0
+ 877 000e FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 878 0010 9BB2     		uxth	r3, r3
+ 879 0012 1B02     		lsls	r3, r3, #8
+ 880 0014 9BB2     		uxth	r3, r3
+ 881 0016 03F58043 		add	r3, r3, #16384
+ 882 001a 2833     		adds	r3, r3, #40
+ 883 001c 9AB2     		uxth	r2, r3
+ 884 001e BB88     		ldrh	r3, [r7, #4]
+ 885 0020 1046     		mov	r0, r2
+ 886 0022 1946     		mov	r1, r3
+ 887 0024 FFF7FEFF 		bl	spi_dma_send2B
+ 240:App/STM32F4-Discovery/W5200.c **** }
+ 888              		.loc 1 240 0
+ 889 0028 0837     		adds	r7, r7, #8
+ 890 002a BD46     		mov	sp, r7
+ 891              		@ sp needed
+ 892 002c 80BD     		pop	{r7, pc}
+ 893              		.cfi_endproc
+ 894              	.LFE123:
+ 896 002e 00BF     		.section	.text.write_memory,"ax",%progbits
+ 897              		.align	2
+ 898              		.global	write_memory
+ 899              		.thumb
+ 900              		.thumb_func
+ 902              	write_memory:
+ 903              	.LFB124:
+ 241:App/STM32F4-Discovery/W5200.c **** 
+ 242:App/STM32F4-Discovery/W5200.c **** /*==========================================================================
+ 243:App/STM32F4-Discovery/W5200.c **** 	socket TX/RX memory read write function
+ 244:App/STM32F4-Discovery/W5200.c **** ===========================================================================*/
+ 245:App/STM32F4-Discovery/W5200.c **** /*---------------------------------------------------------------------------
+ 246:App/STM32F4-Discovery/W5200.c **** 	write data to socket TX memory
+ 247:App/STM32F4-Discovery/W5200.c **** ----------------------------------------------------------------------------*/
+ 248:App/STM32F4-Discovery/W5200.c **** 
+ 249:App/STM32F4-Discovery/W5200.c **** void	write_memory(uint8_t sck_fd, uint16_t write_ptr, uint8_t *buf, uint16_t len)
+ 250:App/STM32F4-Discovery/W5200.c **** {
+ 904              		.loc 1 250 0
+ 905              		.cfi_startproc
+ 906              		@ args = 0, pretend = 0, frame = 24
+ 907              		@ frame_needed = 1, uses_anonymous_args = 0
+ 908 0000 80B5     		push	{r7, lr}
+ 909              	.LCFI42:
+ 910              		.cfi_def_cfa_offset 8
+ 911              		.cfi_offset 7, -8
+ 912              		.cfi_offset 14, -4
+ 913 0002 86B0     		sub	sp, sp, #24
+ 914              	.LCFI43:
+ 915              		.cfi_def_cfa_offset 32
+ 916 0004 00AF     		add	r7, sp, #0
+ 917              	.LCFI44:
+ 918              		.cfi_def_cfa_register 7
+ 919 0006 BA60     		str	r2, [r7, #8]
+ 920 0008 0246     		mov	r2, r0
+ 921 000a FA73     		strb	r2, [r7, #15]
+ 922 000c 0A46     		mov	r2, r1	@ movhi
+ 923 000e BA81     		strh	r2, [r7, #12]	@ movhi
+ 924 0010 FB80     		strh	r3, [r7, #6]	@ movhi
+ 251:App/STM32F4-Discovery/W5200.c **** 	uint16_t	memory_addr, offset;
+ 252:App/STM32F4-Discovery/W5200.c **** 	uint16_t	upper_size, left_size;
+ 253:App/STM32F4-Discovery/W5200.c **** 
+ 254:App/STM32F4-Discovery/W5200.c **** 	// calculate offset address 
+ 255:App/STM32F4-Discovery/W5200.c **** 	offset = write_ptr & 0x07ff;
+ 925              		.loc 1 255 0
+ 926 0012 BB89     		ldrh	r3, [r7, #12]	@ movhi
+ 927 0014 C3F30A03 		ubfx	r3, r3, #0, #11
+ 928 0018 FB82     		strh	r3, [r7, #22]	@ movhi
+ 256:App/STM32F4-Discovery/W5200.c **** 
+ 257:App/STM32F4-Discovery/W5200.c **** 	// calculate physical memory start address
+ 258:App/STM32F4-Discovery/W5200.c **** 	memory_addr = W5200_SOCKET_TX_BASE(sck_fd)  + offset;
+ 929              		.loc 1 258 0
+ 930 001a FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 931 001c 9BB2     		uxth	r3, r3
+ 932 001e DB00     		lsls	r3, r3, #3
+ 933 0020 9BB2     		uxth	r3, r3
+ 934 0022 1B02     		lsls	r3, r3, #8
+ 935 0024 9AB2     		uxth	r2, r3
+ 936 0026 FB8A     		ldrh	r3, [r7, #22]	@ movhi
+ 937 0028 1344     		add	r3, r3, r2
+ 938 002a 9BB2     		uxth	r3, r3
+ 939 002c A3F50043 		sub	r3, r3, #32768
+ 940 0030 BB82     		strh	r3, [r7, #20]	@ movhi
+ 259:App/STM32F4-Discovery/W5200.c **** 
+ 260:App/STM32F4-Discovery/W5200.c **** 	// if overflow socket TX memory ?
+ 261:App/STM32F4-Discovery/W5200.c **** 	if(offset + len > W5200_Sn_TXMEM_SIZE(sck_fd) +1 ){
+ 941              		.loc 1 261 0
+ 942 0032 FA8A     		ldrh	r2, [r7, #22]
+ 943 0034 FB88     		ldrh	r3, [r7, #6]
+ 944 0036 1A44     		add	r2, r2, r3
+ 945 0038 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 946 003a 1B02     		lsls	r3, r3, #8
+ 947 003c 03F58043 		add	r3, r3, #16384
+ 948 0040 2033     		adds	r3, r3, #32
+ 949 0042 9A42     		cmp	r2, r3
+ 950 0044 2ADD     		ble	.L45
+ 262:App/STM32F4-Discovery/W5200.c **** 
+ 263:App/STM32F4-Discovery/W5200.c **** 		// copy upper_size bytes
+ 264:App/STM32F4-Discovery/W5200.c **** 		upper_size = W5200_SOCKET_TX_BASE(sck_fd) - offset;
+ 951              		.loc 1 264 0
+ 952 0046 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 953 0048 9BB2     		uxth	r3, r3
+ 954 004a DB00     		lsls	r3, r3, #3
+ 955 004c 9BB2     		uxth	r3, r3
+ 956 004e 1B02     		lsls	r3, r3, #8
+ 957 0050 9AB2     		uxth	r2, r3
+ 958 0052 FB8A     		ldrh	r3, [r7, #22]	@ movhi
+ 959 0054 D31A     		subs	r3, r2, r3
+ 960 0056 9BB2     		uxth	r3, r3
+ 961 0058 A3F50043 		sub	r3, r3, #32768
+ 962 005c 7B82     		strh	r3, [r7, #18]	@ movhi
+ 265:App/STM32F4-Discovery/W5200.c **** 		spi_dma_send( memory_addr,upper_size, buf);
+ 963              		.loc 1 265 0
+ 964 005e BA8A     		ldrh	r2, [r7, #20]
+ 965 0060 7B8A     		ldrh	r3, [r7, #18]
+ 966 0062 1046     		mov	r0, r2
+ 967 0064 1946     		mov	r1, r3
+ 968 0066 BA68     		ldr	r2, [r7, #8]
+ 969 0068 FFF7FEFF 		bl	spi_dma_send
+ 266:App/STM32F4-Discovery/W5200.c **** 		buf += upper_size;
+ 970              		.loc 1 266 0
+ 971 006c 7B8A     		ldrh	r3, [r7, #18]
+ 972 006e BA68     		ldr	r2, [r7, #8]
+ 973 0070 1344     		add	r3, r3, r2
+ 974 0072 BB60     		str	r3, [r7, #8]
+ 267:App/STM32F4-Discovery/W5200.c **** 
+ 268:App/STM32F4-Discovery/W5200.c **** 		// copy left size bytes
+ 269:App/STM32F4-Discovery/W5200.c **** 		left_size = len - upper_size;
+ 975              		.loc 1 269 0
+ 976 0074 FA88     		ldrh	r2, [r7, #6]	@ movhi
+ 977 0076 7B8A     		ldrh	r3, [r7, #18]	@ movhi
+ 978 0078 D31A     		subs	r3, r2, r3
+ 979 007a 3B82     		strh	r3, [r7, #16]	@ movhi
+ 270:App/STM32F4-Discovery/W5200.c **** 		spi_dma_send( W5200_SOCKET_TX_BASE(sck_fd),
+ 980              		.loc 1 270 0
+ 981 007c FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 982 007e 9BB2     		uxth	r3, r3
+ 983 0080 DB00     		lsls	r3, r3, #3
+ 984 0082 9BB2     		uxth	r3, r3
+ 985 0084 1B02     		lsls	r3, r3, #8
+ 986 0086 9BB2     		uxth	r3, r3
+ 987 0088 A3F50043 		sub	r3, r3, #32768
+ 988 008c 9AB2     		uxth	r2, r3
+ 989 008e 3B8A     		ldrh	r3, [r7, #16]
+ 990 0090 1046     		mov	r0, r2
+ 991 0092 1946     		mov	r1, r3
+ 992 0094 BA68     		ldr	r2, [r7, #8]
+ 993 0096 FFF7FEFF 		bl	spi_dma_send
+ 994 009a 06E0     		b	.L44
+ 995              	.L45:
+ 271:App/STM32F4-Discovery/W5200.c **** 		left_size,  buf);
+ 272:App/STM32F4-Discovery/W5200.c **** 
+ 273:App/STM32F4-Discovery/W5200.c **** 	}else{
+ 274:App/STM32F4-Discovery/W5200.c **** 
+ 275:App/STM32F4-Discovery/W5200.c **** 		// copy len size bytes
+ 276:App/STM32F4-Discovery/W5200.c **** 		spi_dma_send( memory_addr,len,  buf);
+ 996              		.loc 1 276 0
+ 997 009c BA8A     		ldrh	r2, [r7, #20]
+ 998 009e FB88     		ldrh	r3, [r7, #6]
+ 999 00a0 1046     		mov	r0, r2
+ 1000 00a2 1946     		mov	r1, r3
+ 1001 00a4 BA68     		ldr	r2, [r7, #8]
+ 1002 00a6 FFF7FEFF 		bl	spi_dma_send
+ 1003              	.L44:
+ 277:App/STM32F4-Discovery/W5200.c **** 	}
+ 278:App/STM32F4-Discovery/W5200.c **** }
+ 1004              		.loc 1 278 0
+ 1005 00aa 1837     		adds	r7, r7, #24
+ 1006 00ac BD46     		mov	sp, r7
+ 1007              		@ sp needed
+ 1008 00ae 80BD     		pop	{r7, pc}
+ 1009              		.cfi_endproc
+ 1010              	.LFE124:
+ 1012              		.section	.text.read_memory,"ax",%progbits
+ 1013              		.align	2
+ 1014              		.global	read_memory
+ 1015              		.thumb
+ 1016              		.thumb_func
+ 1018              	read_memory:
+ 1019              	.LFB125:
+ 279:App/STM32F4-Discovery/W5200.c **** 
+ 280:App/STM32F4-Discovery/W5200.c **** /*---------------------------------------------------------------------------
+ 281:App/STM32F4-Discovery/W5200.c **** 	read data from socket RX memory
+ 282:App/STM32F4-Discovery/W5200.c **** ----------------------------------------------------------------------------*/
+ 283:App/STM32F4-Discovery/W5200.c **** 
+ 284:App/STM32F4-Discovery/W5200.c **** void	read_memory(uint8_t sck_fd, uint16_t read_ptr, uint8_t *buf, uint16_t len)
+ 285:App/STM32F4-Discovery/W5200.c **** {
+ 1020              		.loc 1 285 0
+ 1021              		.cfi_startproc
+ 1022              		@ args = 0, pretend = 0, frame = 24
+ 1023              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1024 0000 80B5     		push	{r7, lr}
+ 1025              	.LCFI45:
+ 1026              		.cfi_def_cfa_offset 8
+ 1027              		.cfi_offset 7, -8
+ 1028              		.cfi_offset 14, -4
+ 1029 0002 86B0     		sub	sp, sp, #24
+ 1030              	.LCFI46:
+ 1031              		.cfi_def_cfa_offset 32
+ 1032 0004 00AF     		add	r7, sp, #0
+ 1033              	.LCFI47:
+ 1034              		.cfi_def_cfa_register 7
+ 1035 0006 BA60     		str	r2, [r7, #8]
+ 1036 0008 0246     		mov	r2, r0
+ 1037 000a FA73     		strb	r2, [r7, #15]
+ 1038 000c 0A46     		mov	r2, r1	@ movhi
+ 1039 000e BA81     		strh	r2, [r7, #12]	@ movhi
+ 1040 0010 FB80     		strh	r3, [r7, #6]	@ movhi
+ 286:App/STM32F4-Discovery/W5200.c **** 	uint16_t	memory_addr, offset;
+ 287:App/STM32F4-Discovery/W5200.c **** 	uint16_t	upper_size, left_size;
+ 288:App/STM32F4-Discovery/W5200.c **** 
+ 289:App/STM32F4-Discovery/W5200.c **** 	// calculate offset address 
+ 290:App/STM32F4-Discovery/W5200.c **** 	offset = read_ptr & 0x07ff;
+ 1041              		.loc 1 290 0
+ 1042 0012 BB89     		ldrh	r3, [r7, #12]	@ movhi
+ 1043 0014 C3F30A03 		ubfx	r3, r3, #0, #11
+ 1044 0018 FB82     		strh	r3, [r7, #22]	@ movhi
+ 291:App/STM32F4-Discovery/W5200.c **** 
+ 292:App/STM32F4-Discovery/W5200.c **** 	// calculate physical memory start address
+ 293:App/STM32F4-Discovery/W5200.c **** 	memory_addr = W5200_SOCKET_RX_BASE(sck_fd)  + offset;
+ 1045              		.loc 1 293 0
+ 1046 001a FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1047 001c 9BB2     		uxth	r3, r3
+ 1048 001e DB00     		lsls	r3, r3, #3
+ 1049 0020 9BB2     		uxth	r3, r3
+ 1050 0022 1B02     		lsls	r3, r3, #8
+ 1051 0024 9AB2     		uxth	r2, r3
+ 1052 0026 FB8A     		ldrh	r3, [r7, #22]	@ movhi
+ 1053 0028 1344     		add	r3, r3, r2
+ 1054 002a 9BB2     		uxth	r3, r3
+ 1055 002c A3F58043 		sub	r3, r3, #16384
+ 1056 0030 BB82     		strh	r3, [r7, #20]	@ movhi
+ 294:App/STM32F4-Discovery/W5200.c **** 
+ 295:App/STM32F4-Discovery/W5200.c **** 	// if overflow socket RX memory ?
+ 296:App/STM32F4-Discovery/W5200.c **** 	if(offset + len > 0x0800){
+ 1057              		.loc 1 296 0
+ 1058 0032 FA8A     		ldrh	r2, [r7, #22]
+ 1059 0034 FB88     		ldrh	r3, [r7, #6]
+ 1060 0036 1344     		add	r3, r3, r2
+ 1061 0038 B3F5006F 		cmp	r3, #2048
+ 1062 003c 2FDD     		ble	.L48
+ 297:App/STM32F4-Discovery/W5200.c **** 
+ 298:App/STM32F4-Discovery/W5200.c **** 		// copy upper_size bytes
+ 299:App/STM32F4-Discovery/W5200.c **** 		upper_size = 0x0800 - offset;
+ 1063              		.loc 1 299 0
+ 1064 003e FB8A     		ldrh	r3, [r7, #22]	@ movhi
+ 1065 0040 C3F50063 		rsb	r3, r3, #2048
+ 1066 0044 7B82     		strh	r3, [r7, #18]	@ movhi
+ 300:App/STM32F4-Discovery/W5200.c **** 		spi_dma_read( memory_addr,upper_size);
+ 1067              		.loc 1 300 0
+ 1068 0046 BA8A     		ldrh	r2, [r7, #20]
+ 1069 0048 7B8A     		ldrh	r3, [r7, #18]
+ 1070 004a 1046     		mov	r0, r2
+ 1071 004c 1946     		mov	r1, r3
+ 1072 004e FFF7FEFF 		bl	spi_dma_read
+ 301:App/STM32F4-Discovery/W5200.c **** 		memcpy(buf, bufferRX+4, upper_size);
+ 1073              		.loc 1 301 0
+ 1074 0052 7B8A     		ldrh	r3, [r7, #18]
+ 1075 0054 B868     		ldr	r0, [r7, #8]
+ 1076 0056 1949     		ldr	r1, .L50
+ 1077 0058 1A46     		mov	r2, r3
+ 1078 005a FFF7FEFF 		bl	memcpy
+ 302:App/STM32F4-Discovery/W5200.c **** 
+ 303:App/STM32F4-Discovery/W5200.c **** 		buf += upper_size;
+ 1079              		.loc 1 303 0
+ 1080 005e 7B8A     		ldrh	r3, [r7, #18]
+ 1081 0060 BA68     		ldr	r2, [r7, #8]
+ 1082 0062 1344     		add	r3, r3, r2
+ 1083 0064 BB60     		str	r3, [r7, #8]
+ 304:App/STM32F4-Discovery/W5200.c **** 
+ 305:App/STM32F4-Discovery/W5200.c **** 		// copy left size bytes
+ 306:App/STM32F4-Discovery/W5200.c **** 		left_size = len - upper_size;
+ 1084              		.loc 1 306 0
+ 1085 0066 FA88     		ldrh	r2, [r7, #6]	@ movhi
+ 1086 0068 7B8A     		ldrh	r3, [r7, #18]	@ movhi
+ 1087 006a D31A     		subs	r3, r2, r3
+ 1088 006c 3B82     		strh	r3, [r7, #16]	@ movhi
+ 307:App/STM32F4-Discovery/W5200.c **** 		spi_dma_read(W5200_SOCKET_RX_BASE(sck_fd), left_size);
+ 1089              		.loc 1 307 0
+ 1090 006e FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1091 0070 9BB2     		uxth	r3, r3
+ 1092 0072 DB00     		lsls	r3, r3, #3
+ 1093 0074 9BB2     		uxth	r3, r3
+ 1094 0076 1B02     		lsls	r3, r3, #8
+ 1095 0078 9BB2     		uxth	r3, r3
+ 1096 007a A3F58043 		sub	r3, r3, #16384
+ 1097 007e 9AB2     		uxth	r2, r3
+ 1098 0080 3B8A     		ldrh	r3, [r7, #16]
+ 1099 0082 1046     		mov	r0, r2
+ 1100 0084 1946     		mov	r1, r3
+ 1101 0086 FFF7FEFF 		bl	spi_dma_read
+ 308:App/STM32F4-Discovery/W5200.c **** 		memcpy(buf+upper_size, bufferRX+4, left_size);
+ 1102              		.loc 1 308 0
+ 1103 008a 7B8A     		ldrh	r3, [r7, #18]
+ 1104 008c BA68     		ldr	r2, [r7, #8]
+ 1105 008e 1A44     		add	r2, r2, r3
+ 1106 0090 3B8A     		ldrh	r3, [r7, #16]
+ 1107 0092 1046     		mov	r0, r2
+ 1108 0094 0949     		ldr	r1, .L50
+ 1109 0096 1A46     		mov	r2, r3
+ 1110 0098 FFF7FEFF 		bl	memcpy
+ 1111 009c 0BE0     		b	.L47
+ 1112              	.L48:
+ 309:App/STM32F4-Discovery/W5200.c **** 	}else{
+ 310:App/STM32F4-Discovery/W5200.c **** 
+ 311:App/STM32F4-Discovery/W5200.c **** 		// copy len size bytes
+ 312:App/STM32F4-Discovery/W5200.c **** 		spi_dma_read( memory_addr,len);
+ 1113              		.loc 1 312 0
+ 1114 009e BA8A     		ldrh	r2, [r7, #20]
+ 1115 00a0 FB88     		ldrh	r3, [r7, #6]
+ 1116 00a2 1046     		mov	r0, r2
+ 1117 00a4 1946     		mov	r1, r3
+ 1118 00a6 FFF7FEFF 		bl	spi_dma_read
+ 313:App/STM32F4-Discovery/W5200.c **** 		memcpy(buf, bufferRX+4, len);
+ 1119              		.loc 1 313 0
+ 1120 00aa FB88     		ldrh	r3, [r7, #6]
+ 1121 00ac B868     		ldr	r0, [r7, #8]
+ 1122 00ae 0349     		ldr	r1, .L50
+ 1123 00b0 1A46     		mov	r2, r3
+ 1124 00b2 FFF7FEFF 		bl	memcpy
+ 1125              	.L47:
+ 314:App/STM32F4-Discovery/W5200.c **** 	}
+ 315:App/STM32F4-Discovery/W5200.c **** }
+ 1126              		.loc 1 315 0
+ 1127 00b6 1837     		adds	r7, r7, #24
+ 1128 00b8 BD46     		mov	sp, r7
+ 1129              		@ sp needed
+ 1130 00ba 80BD     		pop	{r7, pc}
+ 1131              	.L51:
+ 1132              		.align	2
+ 1133              	.L50:
+ 1134 00bc 04000000 		.word	bufferRX+4
+ 1135              		.cfi_endproc
+ 1136              	.LFE125:
+ 1138              		.section	.text.socket,"ax",%progbits
+ 1139              		.align	2
+ 1140              		.global	socket
+ 1141              		.thumb
+ 1142              		.thumb_func
+ 1144              	socket:
+ 1145              	.LFB126:
+ 316:App/STM32F4-Discovery/W5200.c **** 
+ 317:App/STM32F4-Discovery/W5200.c **** 
+ 318:App/STM32F4-Discovery/W5200.c **** 
+ 319:App/STM32F4-Discovery/W5200.c **** /*==========================================================================
+ 320:App/STM32F4-Discovery/W5200.c **** 	socket()	create socket, handle open
+ 321:App/STM32F4-Discovery/W5200.c **** 		ip_proto, RAW mode only.
+ 322:App/STM32F4-Discovery/W5200.c **** ===========================================================================*/
+ 323:App/STM32F4-Discovery/W5200.c **** 
+ 324:App/STM32F4-Discovery/W5200.c **** uint8_t	socket(uint8_t  mode, uint16_t  port, uint8_t ip_proto)
+ 325:App/STM32F4-Discovery/W5200.c **** {
+ 1146              		.loc 1 325 0
+ 1147              		.cfi_startproc
+ 1148              		@ args = 0, pretend = 0, frame = 16
+ 1149              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1150 0000 80B5     		push	{r7, lr}
+ 1151              	.LCFI48:
+ 1152              		.cfi_def_cfa_offset 8
+ 1153              		.cfi_offset 7, -8
+ 1154              		.cfi_offset 14, -4
+ 1155 0002 84B0     		sub	sp, sp, #16
+ 1156              	.LCFI49:
+ 1157              		.cfi_def_cfa_offset 24
+ 1158 0004 00AF     		add	r7, sp, #0
+ 1159              	.LCFI50:
+ 1160              		.cfi_def_cfa_register 7
+ 1161 0006 1346     		mov	r3, r2
+ 1162 0008 0246     		mov	r2, r0
+ 1163 000a FA71     		strb	r2, [r7, #7]
+ 1164 000c 0A46     		mov	r2, r1	@ movhi
+ 1165 000e BA80     		strh	r2, [r7, #4]	@ movhi
+ 1166 0010 BB71     		strb	r3, [r7, #6]
+ 326:App/STM32F4-Discovery/W5200.c **** 	uint8_t	sck_fd;
+ 327:App/STM32F4-Discovery/W5200.c **** 	uint8_t	stat;
+ 328:App/STM32F4-Discovery/W5200.c **** 
+ 329:App/STM32F4-Discovery/W5200.c **** 	// check free socket exists? 
+ 330:App/STM32F4-Discovery/W5200.c **** 	for(sck_fd = 0; sck_fd < W5200_MAX_SOCKETS; sck_fd++){
+ 1167              		.loc 1 330 0
+ 1168 0012 0023     		movs	r3, #0
+ 1169 0014 FB73     		strb	r3, [r7, #15]
+ 1170 0016 0CE0     		b	.L53
+ 1171              	.L56:
+ 331:App/STM32F4-Discovery/W5200.c **** 		if(socket_flg[sck_fd] == 0){
+ 1172              		.loc 1 331 0
+ 1173 0018 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1174 001a 4C4A     		ldr	r2, .L68
+ 1175 001c D35C     		ldrb	r3, [r2, r3]	@ zero_extendqisi2
+ 1176 001e 002B     		cmp	r3, #0
+ 1177 0020 04D1     		bne	.L54
+ 332:App/STM32F4-Discovery/W5200.c **** 			socket_flg[sck_fd] = 1;
+ 1178              		.loc 1 332 0
+ 1179 0022 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1180 0024 494A     		ldr	r2, .L68
+ 1181 0026 0121     		movs	r1, #1
+ 1182 0028 D154     		strb	r1, [r2, r3]
+ 333:App/STM32F4-Discovery/W5200.c **** 			break;
+ 1183              		.loc 1 333 0
+ 1184 002a 05E0     		b	.L55
+ 1185              	.L54:
+ 330:App/STM32F4-Discovery/W5200.c **** 	for(sck_fd = 0; sck_fd < W5200_MAX_SOCKETS; sck_fd++){
+ 1186              		.loc 1 330 0
+ 1187 002c FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1188 002e 0133     		adds	r3, r3, #1
+ 1189 0030 FB73     		strb	r3, [r7, #15]
+ 1190              	.L53:
+ 330:App/STM32F4-Discovery/W5200.c **** 	for(sck_fd = 0; sck_fd < W5200_MAX_SOCKETS; sck_fd++){
+ 1191              		.loc 1 330 0 is_stmt 0 discriminator 1
+ 1192 0032 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1193 0034 072B     		cmp	r3, #7
+ 1194 0036 EFD9     		bls	.L56
+ 1195              	.L55:
+ 334:App/STM32F4-Discovery/W5200.c **** 		}
+ 335:App/STM32F4-Discovery/W5200.c **** 	}
+ 336:App/STM32F4-Discovery/W5200.c **** 	if(sck_fd >= W5200_MAX_SOCKETS) return -1;	// no more sockets.
+ 1196              		.loc 1 336 0 is_stmt 1
+ 1197 0038 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1198 003a 072B     		cmp	r3, #7
+ 1199 003c 01D9     		bls	.L57
+ 1200              		.loc 1 336 0 is_stmt 0 discriminator 1
+ 1201 003e FF23     		movs	r3, #255
+ 1202 0040 7FE0     		b	.L67
+ 1203              	.L57:
+ 337:App/STM32F4-Discovery/W5200.c **** 	// check mode parameter
+ 338:App/STM32F4-Discovery/W5200.c **** 	if((mode & 0x0f) > W5200_MR_PPPOE_ENABLE) return -1;	// mode error.
+ 1204              		.loc 1 338 0 is_stmt 1
+ 1205 0042 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1206 0044 03F00F03 		and	r3, r3, #15
+ 1207 0048 082B     		cmp	r3, #8
+ 1208 004a 01DD     		ble	.L59
+ 1209              		.loc 1 338 0 is_stmt 0 discriminator 1
+ 1210 004c FF23     		movs	r3, #255
+ 1211 004e 78E0     		b	.L67
+ 1212              	.L59:
+ 339:App/STM32F4-Discovery/W5200.c **** 	if(((mode & 0x0f) != W5200_Sn_MR_UDP) && (mode & W5200_Sn_MR_MULTI)) return -1; // MULTI is UDP on
+ 1213              		.loc 1 339 0 is_stmt 1
+ 1214 0050 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1215 0052 03F00F03 		and	r3, r3, #15
+ 1216 0056 022B     		cmp	r3, #2
+ 1217 0058 05D0     		beq	.L60
+ 1218              		.loc 1 339 0 is_stmt 0 discriminator 1
+ 1219 005a FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1220 005c 5BB2     		sxtb	r3, r3
+ 1221 005e 002B     		cmp	r3, #0
+ 1222 0060 01DA     		bge	.L60
+ 1223 0062 FF23     		movs	r3, #255
+ 1224 0064 6DE0     		b	.L67
+ 1225              	.L60:
+ 340:App/STM32F4-Discovery/W5200.c **** 	if(((mode & 0x0f) != W5200_Sn_MR_TCP) && (mode & W5200_Sn_MR_ND)) return -1; // ND is TCP only.
+ 1226              		.loc 1 340 0 is_stmt 1
+ 1227 0066 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1228 0068 03F00F03 		and	r3, r3, #15
+ 1229 006c 012B     		cmp	r3, #1
+ 1230 006e 06D0     		beq	.L61
+ 1231              		.loc 1 340 0 is_stmt 0 discriminator 1
+ 1232 0070 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1233 0072 03F02003 		and	r3, r3, #32
+ 1234 0076 002B     		cmp	r3, #0
+ 1235 0078 01D0     		beq	.L61
+ 1236 007a FF23     		movs	r3, #255
+ 1237 007c 61E0     		b	.L67
+ 1238              	.L61:
+ 341:App/STM32F4-Discovery/W5200.c **** 
+ 342:App/STM32F4-Discovery/W5200.c **** 	// set MODE register
+ 343:App/STM32F4-Discovery/W5200.c **** 	spi_dma_sendByte(W5200_Sn_MR(sck_fd) , mode);
+ 1239              		.loc 1 343 0 is_stmt 1
+ 1240 007e FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1241 0080 9BB2     		uxth	r3, r3
+ 1242 0082 1B02     		lsls	r3, r3, #8
+ 1243 0084 9BB2     		uxth	r3, r3
+ 1244 0086 03F58043 		add	r3, r3, #16384
+ 1245 008a 9AB2     		uxth	r2, r3
+ 1246 008c FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1247 008e 1046     		mov	r0, r2
+ 1248 0090 1946     		mov	r1, r3
+ 1249 0092 FFF7FEFF 		bl	spi_dma_sendByte
+ 344:App/STM32F4-Discovery/W5200.c **** 	//socket_mode[sck_fd] = mode & 0x0f;	// omitting ND/MULTICAST
+ 345:App/STM32F4-Discovery/W5200.c **** 	mode &= 0x0f;
+ 1250              		.loc 1 345 0
+ 1251 0096 FB79     		ldrb	r3, [r7, #7]
+ 1252 0098 03F00F03 		and	r3, r3, #15
+ 1253 009c FB71     		strb	r3, [r7, #7]
+ 346:App/STM32F4-Discovery/W5200.c **** 
+ 347:App/STM32F4-Discovery/W5200.c **** 	uint8_t prt[2];
+ 348:App/STM32F4-Discovery/W5200.c **** 
+ 349:App/STM32F4-Discovery/W5200.c **** 	// set PORT, PROTOCOL 
+ 350:App/STM32F4-Discovery/W5200.c **** 	switch(mode){
+ 1254              		.loc 1 350 0
+ 1255 009e FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1256 00a0 012B     		cmp	r3, #1
+ 1257 00a2 29DB     		blt	.L62
+ 1258 00a4 022B     		cmp	r3, #2
+ 1259 00a6 02DD     		ble	.L63
+ 1260 00a8 032B     		cmp	r3, #3
+ 1261 00aa 18D0     		beq	.L64
+ 1262 00ac 24E0     		b	.L62
+ 1263              	.L63:
+ 351:App/STM32F4-Discovery/W5200.c **** 	case W5200_Sn_MR_TCP:
+ 352:App/STM32F4-Discovery/W5200.c **** 	case W5200_Sn_MR_UDP:
+ 353:App/STM32F4-Discovery/W5200.c **** 
+ 354:App/STM32F4-Discovery/W5200.c **** 		// split port for sending on two 8bits
+ 355:App/STM32F4-Discovery/W5200.c **** 		prt[0] = (port & 0xff00) >> 8;
+ 1264              		.loc 1 355 0
+ 1265 00ae BB88     		ldrh	r3, [r7, #4]
+ 1266 00b0 1B0A     		lsrs	r3, r3, #8
+ 1267 00b2 9BB2     		uxth	r3, r3
+ 1268 00b4 DBB2     		uxtb	r3, r3
+ 1269 00b6 3B73     		strb	r3, [r7, #12]
+ 356:App/STM32F4-Discovery/W5200.c **** 		prt[1] =  (port & 0x00ff);
+ 1270              		.loc 1 356 0
+ 1271 00b8 BB88     		ldrh	r3, [r7, #4]	@ movhi
+ 1272 00ba DBB2     		uxtb	r3, r3
+ 1273 00bc 7B73     		strb	r3, [r7, #13]
+ 357:App/STM32F4-Discovery/W5200.c **** 		spi_dma_send(W5200_Sn_PORT(sck_fd), 2 , prt);
+ 1274              		.loc 1 357 0
+ 1275 00be FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1276 00c0 9BB2     		uxth	r3, r3
+ 1277 00c2 1B02     		lsls	r3, r3, #8
+ 1278 00c4 9BB2     		uxth	r3, r3
+ 1279 00c6 03F58043 		add	r3, r3, #16384
+ 1280 00ca 0433     		adds	r3, r3, #4
+ 1281 00cc 9AB2     		uxth	r2, r3
+ 1282 00ce 07F10C03 		add	r3, r7, #12
+ 1283 00d2 1046     		mov	r0, r2
+ 1284 00d4 0221     		movs	r1, #2
+ 1285 00d6 1A46     		mov	r2, r3
+ 1286 00d8 FFF7FEFF 		bl	spi_dma_send
+ 358:App/STM32F4-Discovery/W5200.c **** 		
+ 359:App/STM32F4-Discovery/W5200.c **** 		break;
+ 1287              		.loc 1 359 0
+ 1288 00dc 0CE0     		b	.L62
+ 1289              	.L64:
+ 360:App/STM32F4-Discovery/W5200.c **** 	case W5200_Sn_MR_IPRAW:
+ 361:App/STM32F4-Discovery/W5200.c **** 		spi_dma_sendByte(W5200_Sn_PROTO(sck_fd), ip_proto);
+ 1290              		.loc 1 361 0
+ 1291 00de FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1292 00e0 9BB2     		uxth	r3, r3
+ 1293 00e2 1B02     		lsls	r3, r3, #8
+ 1294 00e4 9BB2     		uxth	r3, r3
+ 1295 00e6 03F58043 		add	r3, r3, #16384
+ 1296 00ea 1433     		adds	r3, r3, #20
+ 1297 00ec 9AB2     		uxth	r2, r3
+ 1298 00ee BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 1299 00f0 1046     		mov	r0, r2
+ 1300 00f2 1946     		mov	r1, r3
+ 1301 00f4 FFF7FEFF 		bl	spi_dma_sendByte
+ 1302              	.L62:
+ 362:App/STM32F4-Discovery/W5200.c **** 	}
+ 363:App/STM32F4-Discovery/W5200.c **** 
+ 364:App/STM32F4-Discovery/W5200.c **** 	// execute socket open
+ 365:App/STM32F4-Discovery/W5200.c **** 	spi_dma_sendByte(W5200_Sn_CR(sck_fd), W5200_Sn_CR_OPEN);
+ 1303              		.loc 1 365 0
+ 1304 00f8 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1305 00fa 9BB2     		uxth	r3, r3
+ 1306 00fc 1B02     		lsls	r3, r3, #8
+ 1307 00fe 9BB2     		uxth	r3, r3
+ 1308 0100 03F58043 		add	r3, r3, #16384
+ 1309 0104 0133     		adds	r3, r3, #1
+ 1310 0106 9BB2     		uxth	r3, r3
+ 1311 0108 1846     		mov	r0, r3
+ 1312 010a 0121     		movs	r1, #1
+ 1313 010c FFF7FEFF 		bl	spi_dma_sendByte
+ 366:App/STM32F4-Discovery/W5200.c **** 	// wait command complete.
+ 367:App/STM32F4-Discovery/W5200.c **** 	while(get_CRStatus(sck_fd)  != 0);	// 0 value is command complete. 
+ 1314              		.loc 1 367 0
+ 1315 0110 00BF     		nop
+ 1316              	.L65:
+ 1317              		.loc 1 367 0 is_stmt 0 discriminator 1
+ 1318 0112 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1319 0114 1846     		mov	r0, r3
+ 1320 0116 FFF7FEFF 		bl	get_CRStatus
+ 1321 011a 0346     		mov	r3, r0
+ 1322 011c 002B     		cmp	r3, #0
+ 1323 011e F8D1     		bne	.L65
+ 368:App/STM32F4-Discovery/W5200.c **** 
+ 369:App/STM32F4-Discovery/W5200.c **** 	// check status
+ 370:App/STM32F4-Discovery/W5200.c **** 	if(stat = get_SRStatus(sck_fd) != W5200_Sn_SR_SOCK_INIT) return -1;
+ 1324              		.loc 1 370 0 is_stmt 1
+ 1325 0120 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1326 0122 1846     		mov	r0, r3
+ 1327 0124 FFF7FEFF 		bl	get_SRStatus
+ 1328 0128 0346     		mov	r3, r0
+ 1329 012a 132B     		cmp	r3, #19
+ 1330 012c 0CBF     		ite	eq
+ 1331 012e 0023     		moveq	r3, #0
+ 1332 0130 0123     		movne	r3, #1
+ 1333 0132 DBB2     		uxtb	r3, r3
+ 1334 0134 BB73     		strb	r3, [r7, #14]
+ 1335 0136 BB7B     		ldrb	r3, [r7, #14]	@ zero_extendqisi2
+ 1336 0138 002B     		cmp	r3, #0
+ 1337 013a 01D0     		beq	.L66
+ 1338              		.loc 1 370 0 is_stmt 0 discriminator 1
+ 1339 013c FF23     		movs	r3, #255
+ 1340 013e 00E0     		b	.L67
+ 1341              	.L66:
+ 371:App/STM32F4-Discovery/W5200.c **** 
+ 372:App/STM32F4-Discovery/W5200.c **** 	// success return
+ 373:App/STM32F4-Discovery/W5200.c **** 	return sck_fd;
+ 1342              		.loc 1 373 0 is_stmt 1
+ 1343 0140 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1344              	.L67:
+ 374:App/STM32F4-Discovery/W5200.c **** }
+ 1345              		.loc 1 374 0
+ 1346 0142 1846     		mov	r0, r3
+ 1347 0144 1037     		adds	r7, r7, #16
+ 1348 0146 BD46     		mov	sp, r7
+ 1349              		@ sp needed
+ 1350 0148 80BD     		pop	{r7, pc}
+ 1351              	.L69:
+ 1352 014a 00BF     		.align	2
+ 1353              	.L68:
+ 1354 014c 00000000 		.word	socket_flg
+ 1355              		.cfi_endproc
+ 1356              	.LFE126:
+ 1358              		.section	.text.closesocket,"ax",%progbits
+ 1359              		.align	2
+ 1360              		.global	closesocket
+ 1361              		.thumb
+ 1362              		.thumb_func
+ 1364              	closesocket:
+ 1365              	.LFB127:
+ 375:App/STM32F4-Discovery/W5200.c **** 
+ 376:App/STM32F4-Discovery/W5200.c **** /*==========================================================================
+ 377:App/STM32F4-Discovery/W5200.c **** 	closesocket()	socket handle close
+ 378:App/STM32F4-Discovery/W5200.c **** ===========================================================================*/
+ 379:App/STM32F4-Discovery/W5200.c **** 
+ 380:App/STM32F4-Discovery/W5200.c **** int	closesocket(int sck_fd)
+ 381:App/STM32F4-Discovery/W5200.c **** {
+ 1366              		.loc 1 381 0
+ 1367              		.cfi_startproc
+ 1368              		@ args = 0, pretend = 0, frame = 8
+ 1369              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1370 0000 80B5     		push	{r7, lr}
+ 1371              	.LCFI51:
+ 1372              		.cfi_def_cfa_offset 8
+ 1373              		.cfi_offset 7, -8
+ 1374              		.cfi_offset 14, -4
+ 1375 0002 82B0     		sub	sp, sp, #8
+ 1376              	.LCFI52:
+ 1377              		.cfi_def_cfa_offset 16
+ 1378 0004 00AF     		add	r7, sp, #0
+ 1379              	.LCFI53:
+ 1380              		.cfi_def_cfa_register 7
+ 1381 0006 7860     		str	r0, [r7, #4]
+ 382:App/STM32F4-Discovery/W5200.c **** 	// check asign flag
+ 383:App/STM32F4-Discovery/W5200.c **** 	if(sck_fd < 0 || sck_fd >=W5200_MAX_SOCKETS||  socket_flg[sck_fd] != 1) return -1;
+ 1382              		.loc 1 383 0
+ 1383 0008 7B68     		ldr	r3, [r7, #4]
+ 1384 000a 002B     		cmp	r3, #0
+ 1385 000c 08DB     		blt	.L71
+ 1386              		.loc 1 383 0 is_stmt 0 discriminator 2
+ 1387 000e 7B68     		ldr	r3, [r7, #4]
+ 1388 0010 072B     		cmp	r3, #7
+ 1389 0012 05DC     		bgt	.L71
+ 1390              		.loc 1 383 0 discriminator 1
+ 1391 0014 184A     		ldr	r2, .L76
+ 1392 0016 7B68     		ldr	r3, [r7, #4]
+ 1393 0018 1344     		add	r3, r3, r2
+ 1394 001a 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 1395 001c 012B     		cmp	r3, #1
+ 1396 001e 02D0     		beq	.L72
+ 1397              	.L71:
+ 1398 0020 4FF0FF33 		mov	r3, #-1
+ 1399 0024 23E0     		b	.L73
+ 1400              	.L72:
+ 384:App/STM32F4-Discovery/W5200.c **** 
+ 385:App/STM32F4-Discovery/W5200.c **** 	// release socket
+ 386:App/STM32F4-Discovery/W5200.c **** 	socket_flg[sck_fd] = 0;
+ 1401              		.loc 1 386 0 is_stmt 1
+ 1402 0026 144A     		ldr	r2, .L76
+ 1403 0028 7B68     		ldr	r3, [r7, #4]
+ 1404 002a 1344     		add	r3, r3, r2
+ 1405 002c 0022     		movs	r2, #0
+ 1406 002e 1A70     		strb	r2, [r3]
+ 387:App/STM32F4-Discovery/W5200.c **** 	
+ 388:App/STM32F4-Discovery/W5200.c **** 	// execute socket close
+ 389:App/STM32F4-Discovery/W5200.c **** 	spi_dma_sendByte(W5200_Sn_CR(sck_fd), W5200_Sn_CR_CLOSE);
+ 1407              		.loc 1 389 0
+ 1408 0030 7B68     		ldr	r3, [r7, #4]
+ 1409 0032 9BB2     		uxth	r3, r3
+ 1410 0034 1B02     		lsls	r3, r3, #8
+ 1411 0036 9BB2     		uxth	r3, r3
+ 1412 0038 03F58043 		add	r3, r3, #16384
+ 1413 003c 0133     		adds	r3, r3, #1
+ 1414 003e 9BB2     		uxth	r3, r3
+ 1415 0040 1846     		mov	r0, r3
+ 1416 0042 1021     		movs	r1, #16
+ 1417 0044 FFF7FEFF 		bl	spi_dma_sendByte
+ 390:App/STM32F4-Discovery/W5200.c **** 	// wait command complete.
+ 391:App/STM32F4-Discovery/W5200.c **** 	while(get_CRStatus(sck_fd)  != 0);	// 0 value is command complete. 
+ 1418              		.loc 1 391 0
+ 1419 0048 00BF     		nop
+ 1420              	.L74:
+ 1421              		.loc 1 391 0 is_stmt 0 discriminator 1
+ 1422 004a 7B68     		ldr	r3, [r7, #4]
+ 1423 004c DBB2     		uxtb	r3, r3
+ 1424 004e 1846     		mov	r0, r3
+ 1425 0050 FFF7FEFF 		bl	get_CRStatus
+ 1426 0054 0346     		mov	r3, r0
+ 1427 0056 002B     		cmp	r3, #0
+ 1428 0058 F7D1     		bne	.L74
+ 392:App/STM32F4-Discovery/W5200.c **** 
+ 393:App/STM32F4-Discovery/W5200.c **** 	// check status
+ 394:App/STM32F4-Discovery/W5200.c **** 	while( get_SRStatus(sck_fd) != W5200_Sn_SR_SOCK_CLOSED);
+ 1429              		.loc 1 394 0 is_stmt 1
+ 1430 005a 00BF     		nop
+ 1431              	.L75:
+ 1432              		.loc 1 394 0 is_stmt 0 discriminator 1
+ 1433 005c 7B68     		ldr	r3, [r7, #4]
+ 1434 005e DBB2     		uxtb	r3, r3
+ 1435 0060 1846     		mov	r0, r3
+ 1436 0062 FFF7FEFF 		bl	get_SRStatus
+ 1437 0066 0346     		mov	r3, r0
+ 1438 0068 002B     		cmp	r3, #0
+ 1439 006a F7D1     		bne	.L75
+ 395:App/STM32F4-Discovery/W5200.c **** 
+ 396:App/STM32F4-Discovery/W5200.c **** 	// close success
+ 397:App/STM32F4-Discovery/W5200.c **** 	return 0;
+ 1440              		.loc 1 397 0 is_stmt 1
+ 1441 006c 0023     		movs	r3, #0
+ 1442              	.L73:
+ 398:App/STM32F4-Discovery/W5200.c **** }
+ 1443              		.loc 1 398 0
+ 1444 006e 1846     		mov	r0, r3
+ 1445 0070 0837     		adds	r7, r7, #8
+ 1446 0072 BD46     		mov	sp, r7
+ 1447              		@ sp needed
+ 1448 0074 80BD     		pop	{r7, pc}
+ 1449              	.L77:
+ 1450 0076 00BF     		.align	2
+ 1451              	.L76:
+ 1452 0078 00000000 		.word	socket_flg
+ 1453              		.cfi_endproc
+ 1454              	.LFE127:
+ 1456              		.section	.text.connect,"ax",%progbits
+ 1457              		.align	2
+ 1458              		.global	connect
+ 1459              		.thumb
+ 1460              		.thumb_func
+ 1462              	connect:
+ 1463              	.LFB128:
+ 399:App/STM32F4-Discovery/W5200.c **** 
+ 400:App/STM32F4-Discovery/W5200.c **** /*==========================================================================
+ 401:App/STM32F4-Discovery/W5200.c **** 	connect()	connect to remote host (TCP only)
+ 402:App/STM32F4-Discovery/W5200.c **** ===========================================================================*/
+ 403:App/STM32F4-Discovery/W5200.c **** 
+ 404:App/STM32F4-Discovery/W5200.c **** int	connect(uint8_t sck_fd, uint8_t *to_ip, uint16_t to_port)
+ 405:App/STM32F4-Discovery/W5200.c **** {
+ 1464              		.loc 1 405 0
+ 1465              		.cfi_startproc
+ 1466              		@ args = 0, pretend = 0, frame = 16
+ 1467              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1468 0000 80B5     		push	{r7, lr}
+ 1469              	.LCFI54:
+ 1470              		.cfi_def_cfa_offset 8
+ 1471              		.cfi_offset 7, -8
+ 1472              		.cfi_offset 14, -4
+ 1473 0002 84B0     		sub	sp, sp, #16
+ 1474              	.LCFI55:
+ 1475              		.cfi_def_cfa_offset 24
+ 1476 0004 00AF     		add	r7, sp, #0
+ 1477              	.LCFI56:
+ 1478              		.cfi_def_cfa_register 7
+ 1479 0006 3960     		str	r1, [r7]
+ 1480 0008 1346     		mov	r3, r2
+ 1481 000a 0246     		mov	r2, r0
+ 1482 000c FA71     		strb	r2, [r7, #7]
+ 1483 000e BB80     		strh	r3, [r7, #4]	@ movhi
+ 406:App/STM32F4-Discovery/W5200.c **** 	uint8_t	status;
+ 407:App/STM32F4-Discovery/W5200.c **** 
+ 408:App/STM32F4-Discovery/W5200.c **** 	// check socket asign flag
+ 409:App/STM32F4-Discovery/W5200.c **** 	if(sck_fd < 0 || sck_fd >= W5200_MAX_SOCKETS ||  socket_flg[sck_fd] != 1) return -1;
+ 1484              		.loc 1 409 0
+ 1485 0010 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1486 0012 072B     		cmp	r3, #7
+ 1487 0014 04D8     		bhi	.L79
+ 1488              		.loc 1 409 0 is_stmt 0 discriminator 2
+ 1489 0016 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1490 0018 3A4A     		ldr	r2, .L89
+ 1491 001a D35C     		ldrb	r3, [r2, r3]	@ zero_extendqisi2
+ 1492 001c 012B     		cmp	r3, #1
+ 1493 001e 02D0     		beq	.L80
+ 1494              	.L79:
+ 1495              		.loc 1 409 0 discriminator 1
+ 1496 0020 4FF0FF33 		mov	r3, #-1
+ 1497 0024 6AE0     		b	.L88
+ 1498              	.L80:
+ 410:App/STM32F4-Discovery/W5200.c **** 
+ 411:App/STM32F4-Discovery/W5200.c **** 	// check parameter
+ 412:App/STM32F4-Discovery/W5200.c **** 	if(to_ip == NULL || to_port == 0) return -1;
+ 1499              		.loc 1 412 0 is_stmt 1
+ 1500 0026 3B68     		ldr	r3, [r7]
+ 1501 0028 002B     		cmp	r3, #0
+ 1502 002a 02D0     		beq	.L82
+ 1503              		.loc 1 412 0 is_stmt 0 discriminator 2
+ 1504 002c BB88     		ldrh	r3, [r7, #4]
+ 1505 002e 002B     		cmp	r3, #0
+ 1506 0030 02D1     		bne	.L83
+ 1507              	.L82:
+ 1508              		.loc 1 412 0 discriminator 1
+ 1509 0032 4FF0FF33 		mov	r3, #-1
+ 1510 0036 61E0     		b	.L88
+ 1511              	.L83:
+ 413:App/STM32F4-Discovery/W5200.c **** 	if(get_SRStatus(sck_fd) !=  W5200_Sn_SR_SOCK_INIT) return -1;
+ 1512              		.loc 1 413 0 is_stmt 1
+ 1513 0038 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1514 003a 1846     		mov	r0, r3
+ 1515 003c FFF7FEFF 		bl	get_SRStatus
+ 1516 0040 0346     		mov	r3, r0
+ 1517 0042 132B     		cmp	r3, #19
+ 1518 0044 02D0     		beq	.L84
+ 1519              		.loc 1 413 0 is_stmt 0 discriminator 1
+ 1520 0046 4FF0FF33 		mov	r3, #-1
+ 1521 004a 57E0     		b	.L88
+ 1522              	.L84:
+ 414:App/STM32F4-Discovery/W5200.c **** 	status = get_SRStatus(sck_fd);
+ 1523              		.loc 1 414 0 is_stmt 1
+ 1524 004c FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1525 004e 1846     		mov	r0, r3
+ 1526 0050 FFF7FEFF 		bl	get_SRStatus
+ 1527 0054 0346     		mov	r3, r0
+ 1528 0056 FB73     		strb	r3, [r7, #15]
+ 415:App/STM32F4-Discovery/W5200.c **** 	
+ 416:App/STM32F4-Discovery/W5200.c **** 	// set IP/PORT
+ 417:App/STM32F4-Discovery/W5200.c **** 	spi_dma_send(W5200_Sn_DIPR(sck_fd), 4, to_ip);
+ 1529              		.loc 1 417 0
+ 1530 0058 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1531 005a 9BB2     		uxth	r3, r3
+ 1532 005c 1B02     		lsls	r3, r3, #8
+ 1533 005e 9BB2     		uxth	r3, r3
+ 1534 0060 03F58043 		add	r3, r3, #16384
+ 1535 0064 0C33     		adds	r3, r3, #12
+ 1536 0066 9BB2     		uxth	r3, r3
+ 1537 0068 1846     		mov	r0, r3
+ 1538 006a 0421     		movs	r1, #4
+ 1539 006c 3A68     		ldr	r2, [r7]
+ 1540 006e FFF7FEFF 		bl	spi_dma_send
+ 418:App/STM32F4-Discovery/W5200.c **** 	// split port for sending on two 8bits
+ 419:App/STM32F4-Discovery/W5200.c **** 	uint8_t prt[2];
+ 420:App/STM32F4-Discovery/W5200.c **** 		prt[0] = (to_port & 0xff00) >> 8;
+ 1541              		.loc 1 420 0
+ 1542 0072 BB88     		ldrh	r3, [r7, #4]
+ 1543 0074 1B0A     		lsrs	r3, r3, #8
+ 1544 0076 9BB2     		uxth	r3, r3
+ 1545 0078 DBB2     		uxtb	r3, r3
+ 1546 007a 3B73     		strb	r3, [r7, #12]
+ 421:App/STM32F4-Discovery/W5200.c **** 		prt[1] =  (to_port & 0x00ff);
+ 1547              		.loc 1 421 0
+ 1548 007c BB88     		ldrh	r3, [r7, #4]	@ movhi
+ 1549 007e DBB2     		uxtb	r3, r3
+ 1550 0080 7B73     		strb	r3, [r7, #13]
+ 422:App/STM32F4-Discovery/W5200.c **** 	spi_dma_send(W5200_Sn_DPORT(sck_fd), 2 , prt);
+ 1551              		.loc 1 422 0
+ 1552 0082 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1553 0084 9BB2     		uxth	r3, r3
+ 1554 0086 1B02     		lsls	r3, r3, #8
+ 1555 0088 9BB2     		uxth	r3, r3
+ 1556 008a 03F58043 		add	r3, r3, #16384
+ 1557 008e 1033     		adds	r3, r3, #16
+ 1558 0090 9AB2     		uxth	r2, r3
+ 1559 0092 07F10C03 		add	r3, r7, #12
+ 1560 0096 1046     		mov	r0, r2
+ 1561 0098 0221     		movs	r1, #2
+ 1562 009a 1A46     		mov	r2, r3
+ 1563 009c FFF7FEFF 		bl	spi_dma_send
+ 423:App/STM32F4-Discovery/W5200.c **** 	
+ 424:App/STM32F4-Discovery/W5200.c **** 	// CONNECT command
+ 425:App/STM32F4-Discovery/W5200.c **** 	spi_dma_sendByte(W5200_Sn_CR(sck_fd), W5200_Sn_CR_CONNECT);
+ 1564              		.loc 1 425 0
+ 1565 00a0 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1566 00a2 9BB2     		uxth	r3, r3
+ 1567 00a4 1B02     		lsls	r3, r3, #8
+ 1568 00a6 9BB2     		uxth	r3, r3
+ 1569 00a8 03F58043 		add	r3, r3, #16384
+ 1570 00ac 0133     		adds	r3, r3, #1
+ 1571 00ae 9BB2     		uxth	r3, r3
+ 1572 00b0 1846     		mov	r0, r3
+ 1573 00b2 0421     		movs	r1, #4
+ 1574 00b4 FFF7FEFF 		bl	spi_dma_sendByte
+ 426:App/STM32F4-Discovery/W5200.c **** 	while(get_CRStatus(sck_fd) != 0);	// command complete
+ 1575              		.loc 1 426 0
+ 1576 00b8 00BF     		nop
+ 1577              	.L85:
+ 1578              		.loc 1 426 0 is_stmt 0 discriminator 1
+ 1579 00ba FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1580 00bc 1846     		mov	r0, r3
+ 1581 00be FFF7FEFF 		bl	get_CRStatus
+ 1582 00c2 0346     		mov	r3, r0
+ 1583 00c4 002B     		cmp	r3, #0
+ 1584 00c6 F8D1     		bne	.L85
+ 427:App/STM32F4-Discovery/W5200.c **** 
+ 428:App/STM32F4-Discovery/W5200.c **** 	// check status
+ 429:App/STM32F4-Discovery/W5200.c **** 	while(status = get_SRStatus(sck_fd) !=  W5200_Sn_SR_SOCK_ESTABLISHED){
+ 1585              		.loc 1 429 0 is_stmt 1
+ 1586 00c8 09E0     		b	.L86
+ 1587              	.L87:
+ 430:App/STM32F4-Discovery/W5200.c **** 		if(status == W5200_Sn_SR_SOCK_CLOSED) {
+ 1588              		.loc 1 430 0
+ 1589 00ca FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1590 00cc 002B     		cmp	r3, #0
+ 1591 00ce 06D1     		bne	.L86
+ 431:App/STM32F4-Discovery/W5200.c **** 			socket_flg[sck_fd] = 0;
+ 1592              		.loc 1 431 0
+ 1593 00d0 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1594 00d2 0C4A     		ldr	r2, .L89
+ 1595 00d4 0021     		movs	r1, #0
+ 1596 00d6 D154     		strb	r1, [r2, r3]
+ 432:App/STM32F4-Discovery/W5200.c **** 			return -1;
+ 1597              		.loc 1 432 0
+ 1598 00d8 4FF0FF33 		mov	r3, #-1
+ 1599 00dc 0EE0     		b	.L88
+ 1600              	.L86:
+ 429:App/STM32F4-Discovery/W5200.c **** 	while(status = get_SRStatus(sck_fd) !=  W5200_Sn_SR_SOCK_ESTABLISHED){
+ 1601              		.loc 1 429 0 discriminator 1
+ 1602 00de FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1603 00e0 1846     		mov	r0, r3
+ 1604 00e2 FFF7FEFF 		bl	get_SRStatus
+ 1605 00e6 0346     		mov	r3, r0
+ 1606 00e8 172B     		cmp	r3, #23
+ 1607 00ea 0CBF     		ite	eq
+ 1608 00ec 0023     		moveq	r3, #0
+ 1609 00ee 0123     		movne	r3, #1
+ 1610 00f0 DBB2     		uxtb	r3, r3
+ 1611 00f2 FB73     		strb	r3, [r7, #15]
+ 1612 00f4 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1613 00f6 002B     		cmp	r3, #0
+ 1614 00f8 E7D1     		bne	.L87
+ 433:App/STM32F4-Discovery/W5200.c **** 		}
+ 434:App/STM32F4-Discovery/W5200.c **** 	}
+ 435:App/STM32F4-Discovery/W5200.c **** 
+ 436:App/STM32F4-Discovery/W5200.c **** 	
+ 437:App/STM32F4-Discovery/W5200.c **** 
+ 438:App/STM32F4-Discovery/W5200.c **** 	return 0;	// connect success complete
+ 1615              		.loc 1 438 0
+ 1616 00fa 0023     		movs	r3, #0
+ 1617              	.L88:
+ 439:App/STM32F4-Discovery/W5200.c **** }
+ 1618              		.loc 1 439 0
+ 1619 00fc 1846     		mov	r0, r3
+ 1620 00fe 1037     		adds	r7, r7, #16
+ 1621 0100 BD46     		mov	sp, r7
+ 1622              		@ sp needed
+ 1623 0102 80BD     		pop	{r7, pc}
+ 1624              	.L90:
+ 1625              		.align	2
+ 1626              	.L89:
+ 1627 0104 00000000 		.word	socket_flg
+ 1628              		.cfi_endproc
+ 1629              	.LFE128:
+ 1631              		.section	.text.send,"ax",%progbits
+ 1632              		.align	2
+ 1633              		.global	send
+ 1634              		.thumb
+ 1635              		.thumb_func
+ 1637              	send:
+ 1638              	.LFB129:
+ 440:App/STM32F4-Discovery/W5200.c **** 
+ 441:App/STM32F4-Discovery/W5200.c **** /*==========================================================================
+ 442:App/STM32F4-Discovery/W5200.c **** 	send()	send *buf to  (TCP only)
+ 443:App/STM32F4-Discovery/W5200.c **** ===========================================================================*/
+ 444:App/STM32F4-Discovery/W5200.c **** 
+ 445:App/STM32F4-Discovery/W5200.c **** int	send(uint8_t sck_fd, uint8_t *buf, uint16_t len, uint16_t flag)
+ 446:App/STM32F4-Discovery/W5200.c **** {
+ 1639              		.loc 1 446 0
+ 1640              		.cfi_startproc
+ 1641              		@ args = 0, pretend = 0, frame = 40
+ 1642              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1643 0000 2DE9F043 		push	{r4, r5, r6, r7, r8, r9, lr}
+ 1644              	.LCFI57:
+ 1645              		.cfi_def_cfa_offset 28
+ 1646              		.cfi_offset 4, -28
+ 1647              		.cfi_offset 5, -24
+ 1648              		.cfi_offset 6, -20
+ 1649              		.cfi_offset 7, -16
+ 1650              		.cfi_offset 8, -12
+ 1651              		.cfi_offset 9, -8
+ 1652              		.cfi_offset 14, -4
+ 1653 0004 8BB0     		sub	sp, sp, #44
+ 1654              	.LCFI58:
+ 1655              		.cfi_def_cfa_offset 72
+ 1656 0006 00AF     		add	r7, sp, #0
+ 1657              	.LCFI59:
+ 1658              		.cfi_def_cfa_register 7
+ 1659 0008 B960     		str	r1, [r7, #8]
+ 1660 000a 0146     		mov	r1, r0
+ 1661 000c F973     		strb	r1, [r7, #15]
+ 1662 000e BA81     		strh	r2, [r7, #12]	@ movhi
+ 1663 0010 FB80     		strh	r3, [r7, #6]	@ movhi
+ 447:App/STM32F4-Discovery/W5200.c **** 	uint16_t	send_size;
+ 448:App/STM32F4-Discovery/W5200.c **** 	uint16_t	write_ptr;
+ 449:App/STM32F4-Discovery/W5200.c **** 	uint16_t status = get_SRStatus(sck_fd);
+ 1664              		.loc 1 449 0
+ 1665 0012 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1666 0014 1846     		mov	r0, r3
+ 1667 0016 FFF7FEFF 		bl	get_SRStatus
+ 1668 001a 0346     		mov	r3, r0
+ 1669 001c BB84     		strh	r3, [r7, #36]	@ movhi
+ 450:App/STM32F4-Discovery/W5200.c **** 	// check socket asign flag
+ 451:App/STM32F4-Discovery/W5200.c **** 	if(sck_fd < 0 || sck_fd >= W5200_MAX_SOCKETS ||  socket_flg[sck_fd] != 1) return -1;
+ 1670              		.loc 1 451 0
+ 1671 001e FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1672 0020 072B     		cmp	r3, #7
+ 1673 0022 04D8     		bhi	.L92
+ 1674              		.loc 1 451 0 is_stmt 0 discriminator 2
+ 1675 0024 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1676 0026 564A     		ldr	r2, .L103
+ 1677 0028 D35C     		ldrb	r3, [r2, r3]	@ zero_extendqisi2
+ 1678 002a 012B     		cmp	r3, #1
+ 1679 002c 02D0     		beq	.L93
+ 1680              	.L92:
+ 1681              		.loc 1 451 0 discriminator 1
+ 1682 002e 4FF0FF33 		mov	r3, #-1
+ 1683 0032 A0E0     		b	.L94
+ 1684              	.L93:
+ 452:App/STM32F4-Discovery/W5200.c **** 
+ 453:App/STM32F4-Discovery/W5200.c **** 	// check parameter
+ 454:App/STM32F4-Discovery/W5200.c **** 	if(buf == NULL || len == 0) return -1;
+ 1685              		.loc 1 454 0 is_stmt 1
+ 1686 0034 BB68     		ldr	r3, [r7, #8]
+ 1687 0036 002B     		cmp	r3, #0
+ 1688 0038 02D0     		beq	.L95
+ 1689              		.loc 1 454 0 is_stmt 0 discriminator 2
+ 1690 003a BB89     		ldrh	r3, [r7, #12]
+ 1691 003c 002B     		cmp	r3, #0
+ 1692 003e 02D1     		bne	.L96
+ 1693              	.L95:
+ 1694              		.loc 1 454 0 discriminator 1
+ 1695 0040 4FF0FF33 		mov	r3, #-1
+ 1696 0044 97E0     		b	.L94
+ 1697              	.L96:
+ 455:App/STM32F4-Discovery/W5200.c **** 	
+ 456:App/STM32F4-Discovery/W5200.c **** 	// check status
+ 457:App/STM32F4-Discovery/W5200.c **** 	if(get_SRStatus(sck_fd) != W5200_Sn_SR_SOCK_ESTABLISHED) return 0; // closing or fin close wait.
+ 1698              		.loc 1 457 0 is_stmt 1
+ 1699 0046 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1700 0048 1846     		mov	r0, r3
+ 1701 004a FFF7FEFF 		bl	get_SRStatus
+ 1702 004e 0346     		mov	r3, r0
+ 1703 0050 172B     		cmp	r3, #23
+ 1704 0052 01D0     		beq	.L97
+ 1705              		.loc 1 457 0 is_stmt 0 discriminator 1
+ 1706 0054 0023     		movs	r3, #0
+ 1707 0056 8EE0     		b	.L94
+ 1708              	.L97:
+ 458:App/STM32F4-Discovery/W5200.c **** 
+ 459:App/STM32F4-Discovery/W5200.c **** 	// check TX memory free size?
+ 460:App/STM32F4-Discovery/W5200.c **** 	while((send_size = get_TXFSRStatus(sck_fd)) == 0){
+ 1709              		.loc 1 460 0 is_stmt 1
+ 1710 0058 04E0     		b	.L98
+ 1711              	.L99:
+ 461:App/STM32F4-Discovery/W5200.c **** 		if(flag == 1) return 0;	// NONE BLOCKING
+ 1712              		.loc 1 461 0
+ 1713 005a FB88     		ldrh	r3, [r7, #6]
+ 1714 005c 012B     		cmp	r3, #1
+ 1715 005e 01D1     		bne	.L98
+ 1716              		.loc 1 461 0 is_stmt 0 discriminator 1
+ 1717 0060 0023     		movs	r3, #0
+ 1718 0062 88E0     		b	.L94
+ 1719              	.L98:
+ 460:App/STM32F4-Discovery/W5200.c **** 	while((send_size = get_TXFSRStatus(sck_fd)) == 0){
+ 1720              		.loc 1 460 0 is_stmt 1 discriminator 1
+ 1721 0064 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1722 0066 1846     		mov	r0, r3
+ 1723 0068 FFF7FEFF 		bl	get_TXFSRStatus
+ 1724 006c 0346     		mov	r3, r0
+ 1725 006e FB84     		strh	r3, [r7, #38]	@ movhi
+ 1726 0070 FB8C     		ldrh	r3, [r7, #38]
+ 1727 0072 002B     		cmp	r3, #0
+ 1728 0074 F1D0     		beq	.L99
+ 462:App/STM32F4-Discovery/W5200.c **** 	}
+ 463:App/STM32F4-Discovery/W5200.c **** 
+ 464:App/STM32F4-Discovery/W5200.c **** 	// get write pointer
+ 465:App/STM32F4-Discovery/W5200.c **** 	write_ptr = get_TXWRStatus(sck_fd);
+ 1729              		.loc 1 465 0
+ 1730 0076 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1731 0078 1846     		mov	r0, r3
+ 1732 007a FFF7FEFF 		bl	get_TXWRStatus
+ 1733 007e 0346     		mov	r3, r0
+ 1734 0080 7B84     		strh	r3, [r7, #34]	@ movhi
+ 466:App/STM32F4-Discovery/W5200.c **** 
+ 467:App/STM32F4-Discovery/W5200.c **** 	// check write length
+ 468:App/STM32F4-Discovery/W5200.c **** 	if(send_size > len) send_size = len;
+ 1735              		.loc 1 468 0
+ 1736 0082 FA8C     		ldrh	r2, [r7, #38]
+ 1737 0084 BB89     		ldrh	r3, [r7, #12]
+ 1738 0086 9A42     		cmp	r2, r3
+ 1739 0088 01D9     		bls	.L100
+ 1740              		.loc 1 468 0 is_stmt 0 discriminator 1
+ 1741 008a BB89     		ldrh	r3, [r7, #12]	@ movhi
+ 1742 008c FB84     		strh	r3, [r7, #38]	@ movhi
+ 1743              	.L100:
+ 469:App/STM32F4-Discovery/W5200.c **** 
+ 470:App/STM32F4-Discovery/W5200.c **** 	// data write to memory
+ 471:App/STM32F4-Discovery/W5200.c **** 	write_memory(sck_fd, write_ptr, buf, send_size);
+ 1744              		.loc 1 471 0 is_stmt 1
+ 1745 008e F97B     		ldrb	r1, [r7, #15]	@ zero_extendqisi2
+ 1746 0090 7A8C     		ldrh	r2, [r7, #34]
+ 1747 0092 FB8C     		ldrh	r3, [r7, #38]
+ 1748 0094 0846     		mov	r0, r1
+ 1749 0096 1146     		mov	r1, r2
+ 1750 0098 BA68     		ldr	r2, [r7, #8]
+ 1751 009a FFF7FEFF 		bl	write_memory
+ 472:App/STM32F4-Discovery/W5200.c **** 
+ 473:App/STM32F4-Discovery/W5200.c **** 	// pointer update
+ 474:App/STM32F4-Discovery/W5200.c **** 	write_ptr += send_size;
+ 1752              		.loc 1 474 0
+ 1753 009e 7A8C     		ldrh	r2, [r7, #34]	@ movhi
+ 1754 00a0 FB8C     		ldrh	r3, [r7, #38]	@ movhi
+ 1755 00a2 1344     		add	r3, r3, r2
+ 1756 00a4 7B84     		strh	r3, [r7, #34]	@ movhi
+ 475:App/STM32F4-Discovery/W5200.c **** 	set_TXWR(sck_fd, write_ptr);
+ 1757              		.loc 1 475 0
+ 1758 00a6 FA7B     		ldrb	r2, [r7, #15]	@ zero_extendqisi2
+ 1759 00a8 7B8C     		ldrh	r3, [r7, #34]
+ 1760 00aa 1046     		mov	r0, r2
+ 1761 00ac 1946     		mov	r1, r3
+ 1762 00ae FFF7FEFF 		bl	set_TXWR
+ 476:App/STM32F4-Discovery/W5200.c **** 		
+ 477:App/STM32F4-Discovery/W5200.c **** 	// test function 
+ 478:App/STM32F4-Discovery/W5200.c **** 	
+ 479:App/STM32F4-Discovery/W5200.c **** 
+ 480:App/STM32F4-Discovery/W5200.c **** 	uint16_t start = get_TXRD(sck_fd);
+ 1763              		.loc 1 480 0
+ 1764 00b2 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1765 00b4 1846     		mov	r0, r3
+ 1766 00b6 FFF7FEFF 		bl	get_TXRD
+ 1767 00ba 0346     		mov	r3, r0
+ 1768 00bc 3B84     		strh	r3, [r7, #32]	@ movhi
+ 481:App/STM32F4-Discovery/W5200.c **** 	uint16_t end   = get_TXWRStatus(sck_fd); 
+ 1769              		.loc 1 481 0
+ 1770 00be FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1771 00c0 1846     		mov	r0, r3
+ 1772 00c2 FFF7FEFF 		bl	get_TXWRStatus
+ 1773 00c6 0346     		mov	r3, r0
+ 1774 00c8 FB83     		strh	r3, [r7, #30]	@ movhi
+ 482:App/STM32F4-Discovery/W5200.c **** 	uint8_t data [write_ptr-start]; 	
+ 1775              		.loc 1 482 0
+ 1776 00ca 7A8C     		ldrh	r2, [r7, #34]
+ 1777 00cc 3B8C     		ldrh	r3, [r7, #32]
+ 1778 00ce D11A     		subs	r1, r2, r3
+ 1779 00d0 6B46     		mov	r3, sp
+ 1780 00d2 1E46     		mov	r6, r3
+ 1781 00d4 4B1E     		subs	r3, r1, #1
+ 1782 00d6 BB61     		str	r3, [r7, #24]
+ 1783 00d8 0B46     		mov	r3, r1
+ 1784 00da 1A46     		mov	r2, r3
+ 1785 00dc 4FF00003 		mov	r3, #0
+ 1786 00e0 4FEAC309 		lsl	r9, r3, #3
+ 1787 00e4 49EA5279 		orr	r9, r9, r2, lsr #29
+ 1788 00e8 4FEAC208 		lsl	r8, r2, #3
+ 1789 00ec 0B46     		mov	r3, r1
+ 1790 00ee 1A46     		mov	r2, r3
+ 1791 00f0 4FF00003 		mov	r3, #0
+ 1792 00f4 DD00     		lsls	r5, r3, #3
+ 1793 00f6 45EA5275 		orr	r5, r5, r2, lsr #29
+ 1794 00fa D400     		lsls	r4, r2, #3
+ 1795 00fc 0B46     		mov	r3, r1
+ 1796 00fe 0733     		adds	r3, r3, #7
+ 1797 0100 DB08     		lsrs	r3, r3, #3
+ 1798 0102 DB00     		lsls	r3, r3, #3
+ 1799 0104 ADEB030D 		sub	sp, sp, r3
+ 1800 0108 6B46     		mov	r3, sp
+ 1801 010a 0033     		adds	r3, r3, #0
+ 1802 010c 7B61     		str	r3, [r7, #20]
+ 483:App/STM32F4-Discovery/W5200.c **** 	spi_dma_read(start+0x8000, write_ptr-start );
+ 1803              		.loc 1 483 0
+ 1804 010e 3B8C     		ldrh	r3, [r7, #32]	@ movhi
+ 1805 0110 A3F50043 		sub	r3, r3, #32768
+ 1806 0114 9AB2     		uxth	r2, r3
+ 1807 0116 798C     		ldrh	r1, [r7, #34]	@ movhi
+ 1808 0118 3B8C     		ldrh	r3, [r7, #32]	@ movhi
+ 1809 011a CB1A     		subs	r3, r1, r3
+ 1810 011c 9BB2     		uxth	r3, r3
+ 1811 011e 1046     		mov	r0, r2
+ 1812 0120 1946     		mov	r1, r3
+ 1813 0122 FFF7FEFF 		bl	spi_dma_read
+ 484:App/STM32F4-Discovery/W5200.c **** 	memcpy(data, bufferRX +4, write_ptr-start);
+ 1814              		.loc 1 484 0
+ 1815 0126 7A69     		ldr	r2, [r7, #20]
+ 1816 0128 798C     		ldrh	r1, [r7, #34]
+ 1817 012a 3B8C     		ldrh	r3, [r7, #32]
+ 1818 012c CB1A     		subs	r3, r1, r3
+ 1819 012e 1046     		mov	r0, r2
+ 1820 0130 1449     		ldr	r1, .L103+4
+ 1821 0132 1A46     		mov	r2, r3
+ 1822 0134 FFF7FEFF 		bl	memcpy
+ 485:App/STM32F4-Discovery/W5200.c **** 
+ 486:App/STM32F4-Discovery/W5200.c **** 	
+ 487:App/STM32F4-Discovery/W5200.c **** 	// test function 
+ 488:App/STM32F4-Discovery/W5200.c **** 	
+ 489:App/STM32F4-Discovery/W5200.c **** 	// send command
+ 490:App/STM32F4-Discovery/W5200.c **** 	spi_dma_sendByte(W5200_Sn_CR(sck_fd), W5200_Sn_CR_SEND);
+ 1823              		.loc 1 490 0
+ 1824 0138 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1825 013a 9BB2     		uxth	r3, r3
+ 1826 013c 1B02     		lsls	r3, r3, #8
+ 1827 013e 9BB2     		uxth	r3, r3
+ 1828 0140 03F58043 		add	r3, r3, #16384
+ 1829 0144 0133     		adds	r3, r3, #1
+ 1830 0146 9BB2     		uxth	r3, r3
+ 1831 0148 1846     		mov	r0, r3
+ 1832 014a 2021     		movs	r1, #32
+ 1833 014c FFF7FEFF 		bl	spi_dma_sendByte
+ 491:App/STM32F4-Discovery/W5200.c **** 	// wait command complete.
+ 492:App/STM32F4-Discovery/W5200.c **** 	while(get_CRStatus(sck_fd) != 0);	// 0 value is command complete. 
+ 1834              		.loc 1 492 0
+ 1835 0150 00BF     		nop
+ 1836              	.L101:
+ 1837              		.loc 1 492 0 is_stmt 0 discriminator 1
+ 1838 0152 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1839 0154 1846     		mov	r0, r3
+ 1840 0156 FFF7FEFF 		bl	get_CRStatus
+ 1841 015a 0346     		mov	r3, r0
+ 1842 015c 002B     		cmp	r3, #0
+ 1843 015e F8D1     		bne	.L101
+ 493:App/STM32F4-Discovery/W5200.c **** 
+ 494:App/STM32F4-Discovery/W5200.c **** 	// wait sending complete
+ 495:App/STM32F4-Discovery/W5200.c **** 	while(get_TXRD(sck_fd) != write_ptr);
+ 1844              		.loc 1 495 0 is_stmt 1
+ 1845 0160 00BF     		nop
+ 1846              	.L102:
+ 1847              		.loc 1 495 0 is_stmt 0 discriminator 1
+ 1848 0162 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1849 0164 1846     		mov	r0, r3
+ 1850 0166 FFF7FEFF 		bl	get_TXRD
+ 1851 016a 0346     		mov	r3, r0
+ 1852 016c 7A8C     		ldrh	r2, [r7, #34]
+ 1853 016e 9A42     		cmp	r2, r3
+ 1854 0170 F7D1     		bne	.L102
+ 496:App/STM32F4-Discovery/W5200.c **** 
+ 497:App/STM32F4-Discovery/W5200.c **** 	return send_size;
+ 1855              		.loc 1 497 0 is_stmt 1
+ 1856 0172 FB8C     		ldrh	r3, [r7, #38]
+ 1857 0174 B546     		mov	sp, r6
+ 1858              	.L94:
+ 498:App/STM32F4-Discovery/W5200.c **** }
+ 1859              		.loc 1 498 0
+ 1860 0176 1846     		mov	r0, r3
+ 1861 0178 2C37     		adds	r7, r7, #44
+ 1862 017a BD46     		mov	sp, r7
+ 1863              		@ sp needed
+ 1864 017c BDE8F083 		pop	{r4, r5, r6, r7, r8, r9, pc}
+ 1865              	.L104:
+ 1866              		.align	2
+ 1867              	.L103:
+ 1868 0180 00000000 		.word	socket_flg
+ 1869 0184 04000000 		.word	bufferRX+4
+ 1870              		.cfi_endproc
+ 1871              	.LFE129:
+ 1873              		.section	.text.recv,"ax",%progbits
+ 1874              		.align	2
+ 1875              		.global	recv
+ 1876              		.thumb
+ 1877              		.thumb_func
+ 1879              	recv:
+ 1880              	.LFB130:
+ 499:App/STM32F4-Discovery/W5200.c **** 
+ 500:App/STM32F4-Discovery/W5200.c **** /*==========================================================================
+ 501:App/STM32F4-Discovery/W5200.c **** 	recv()	receiving data from remote terminal (TCP)
+ 502:App/STM32F4-Discovery/W5200.c **** 	flag is NONE_BLOCK / BLOCK
+ 503:App/STM32F4-Discovery/W5200.c **** 	return code is received data size.
+ 504:App/STM32F4-Discovery/W5200.c **** 	if received disconnect@from peer, size was set to Zero, 
+ 505:App/STM32F4-Discovery/W5200.c **** ===========================================================================*/
+ 506:App/STM32F4-Discovery/W5200.c **** 
+ 507:App/STM32F4-Discovery/W5200.c **** int	recv(uint8_t sck_fd, uint8_t *buf, uint16_t len, uint8_t flag)
+ 508:App/STM32F4-Discovery/W5200.c **** {
+ 1881              		.loc 1 508 0
+ 1882              		.cfi_startproc
+ 1883              		@ args = 0, pretend = 0, frame = 16
+ 1884              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1885 0000 80B5     		push	{r7, lr}
+ 1886              	.LCFI60:
+ 1887              		.cfi_def_cfa_offset 8
+ 1888              		.cfi_offset 7, -8
+ 1889              		.cfi_offset 14, -4
+ 1890 0002 84B0     		sub	sp, sp, #16
+ 1891              	.LCFI61:
+ 1892              		.cfi_def_cfa_offset 24
+ 1893 0004 00AF     		add	r7, sp, #0
+ 1894              	.LCFI62:
+ 1895              		.cfi_def_cfa_register 7
+ 1896 0006 3960     		str	r1, [r7]
+ 1897 0008 0146     		mov	r1, r0
+ 1898 000a F971     		strb	r1, [r7, #7]
+ 1899 000c BA80     		strh	r2, [r7, #4]	@ movhi
+ 1900 000e BB71     		strb	r3, [r7, #6]
+ 509:App/STM32F4-Discovery/W5200.c **** 	uint16_t	read_len;
+ 510:App/STM32F4-Discovery/W5200.c **** 	uint16_t	read_ptr;
+ 511:App/STM32F4-Discovery/W5200.c **** 
+ 512:App/STM32F4-Discovery/W5200.c **** 	// check asign flag
+ 513:App/STM32F4-Discovery/W5200.c **** 	if(sck_fd < 0 || sck_fd >= W5200_MAX_SOCKETS ||  socket_flg[sck_fd] != 1) return -1;
+ 1901              		.loc 1 513 0
+ 1902 0010 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1903 0012 072B     		cmp	r3, #7
+ 1904 0014 04D8     		bhi	.L106
+ 1905              		.loc 1 513 0 is_stmt 0 discriminator 2
+ 1906 0016 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1907 0018 314A     		ldr	r2, .L115
+ 1908 001a D35C     		ldrb	r3, [r2, r3]	@ zero_extendqisi2
+ 1909 001c 012B     		cmp	r3, #1
+ 1910 001e 02D0     		beq	.L107
+ 1911              	.L106:
+ 1912              		.loc 1 513 0 discriminator 1
+ 1913 0020 4FF0FF33 		mov	r3, #-1
+ 1914 0024 57E0     		b	.L108
+ 1915              	.L107:
+ 514:App/STM32F4-Discovery/W5200.c **** 
+ 515:App/STM32F4-Discovery/W5200.c **** 	// check parameter
+ 516:App/STM32F4-Discovery/W5200.c **** 	if(buf == NULL || len == 0) return -1;
+ 1916              		.loc 1 516 0 is_stmt 1
+ 1917 0026 3B68     		ldr	r3, [r7]
+ 1918 0028 002B     		cmp	r3, #0
+ 1919 002a 02D0     		beq	.L109
+ 1920              		.loc 1 516 0 is_stmt 0 discriminator 2
+ 1921 002c BB88     		ldrh	r3, [r7, #4]
+ 1922 002e 002B     		cmp	r3, #0
+ 1923 0030 02D1     		bne	.L110
+ 1924              	.L109:
+ 1925              		.loc 1 516 0 discriminator 1
+ 1926 0032 4FF0FF33 		mov	r3, #-1
+ 1927 0036 4EE0     		b	.L108
+ 1928              	.L110:
+ 517:App/STM32F4-Discovery/W5200.c **** 
+ 518:App/STM32F4-Discovery/W5200.c **** 	// check status
+ 519:App/STM32F4-Discovery/W5200.c **** 	if(get_SRStatus(sck_fd) != W5200_Sn_SR_SOCK_ESTABLISHED) return 0;	// closing or fin close wait.
+ 1929              		.loc 1 519 0 is_stmt 1
+ 1930 0038 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1931 003a 1846     		mov	r0, r3
+ 1932 003c FFF7FEFF 		bl	get_SRStatus
+ 1933 0040 0346     		mov	r3, r0
+ 1934 0042 172B     		cmp	r3, #23
+ 1935 0044 01D0     		beq	.L111
+ 1936              		.loc 1 519 0 is_stmt 0 discriminator 1
+ 1937 0046 0023     		movs	r3, #0
+ 1938 0048 45E0     		b	.L108
+ 1939              	.L111:
+ 520:App/STM32F4-Discovery/W5200.c **** 
+ 521:App/STM32F4-Discovery/W5200.c **** 	// received data exists?
+ 522:App/STM32F4-Discovery/W5200.c **** 	while((read_len = get_RXRSR(sck_fd)) == 0){
+ 1940              		.loc 1 522 0 is_stmt 1
+ 1941 004a 04E0     		b	.L112
+ 1942              	.L113:
+ 523:App/STM32F4-Discovery/W5200.c **** 		if(flag == 1) return 0;	// NONE BLOCKING
+ 1943              		.loc 1 523 0
+ 1944 004c BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 1945 004e 012B     		cmp	r3, #1
+ 1946 0050 01D1     		bne	.L112
+ 1947              		.loc 1 523 0 is_stmt 0 discriminator 1
+ 1948 0052 0023     		movs	r3, #0
+ 1949 0054 3FE0     		b	.L108
+ 1950              	.L112:
+ 522:App/STM32F4-Discovery/W5200.c **** 	while((read_len = get_RXRSR(sck_fd)) == 0){
+ 1951              		.loc 1 522 0 is_stmt 1 discriminator 1
+ 1952 0056 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1953 0058 1846     		mov	r0, r3
+ 1954 005a FFF7FEFF 		bl	get_RXRSR
+ 1955 005e 0346     		mov	r3, r0
+ 1956 0060 FB81     		strh	r3, [r7, #14]	@ movhi
+ 1957 0062 FB89     		ldrh	r3, [r7, #14]
+ 1958 0064 002B     		cmp	r3, #0
+ 1959 0066 F1D0     		beq	.L113
+ 524:App/STM32F4-Discovery/W5200.c **** 	}
+ 525:App/STM32F4-Discovery/W5200.c **** 
+ 526:App/STM32F4-Discovery/W5200.c **** 	// set read length
+ 527:App/STM32F4-Discovery/W5200.c **** 	//if(read_len > len) read_len = len;
+ 528:App/STM32F4-Discovery/W5200.c **** 
+ 529:App/STM32F4-Discovery/W5200.c **** 	// get read pointer
+ 530:App/STM32F4-Discovery/W5200.c **** 	read_ptr = get_RXRD(sck_fd);
+ 1960              		.loc 1 530 0
+ 1961 0068 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1962 006a 1846     		mov	r0, r3
+ 1963 006c FFF7FEFF 		bl	get_RXRD
+ 1964 0070 0346     		mov	r3, r0
+ 1965 0072 BB81     		strh	r3, [r7, #12]	@ movhi
+ 531:App/STM32F4-Discovery/W5200.c **** 
+ 532:App/STM32F4-Discovery/W5200.c **** 	// read from RX memory
+ 533:App/STM32F4-Discovery/W5200.c **** 	read_memory(sck_fd, read_ptr, buf, read_len < len ? read_len: len);
+ 1966              		.loc 1 533 0
+ 1967 0074 BA88     		ldrh	r2, [r7, #4]
+ 1968 0076 FB89     		ldrh	r3, [r7, #14]
+ 1969 0078 9A42     		cmp	r2, r3
+ 1970 007a 38BF     		it	cc
+ 1971 007c 1346     		movcc	r3, r2
+ 1972 007e 9BB2     		uxth	r3, r3
+ 1973 0080 F979     		ldrb	r1, [r7, #7]	@ zero_extendqisi2
+ 1974 0082 BA89     		ldrh	r2, [r7, #12]
+ 1975 0084 0846     		mov	r0, r1
+ 1976 0086 1146     		mov	r1, r2
+ 1977 0088 3A68     		ldr	r2, [r7]
+ 1978 008a FFF7FEFF 		bl	read_memory
+ 534:App/STM32F4-Discovery/W5200.c **** 
+ 535:App/STM32F4-Discovery/W5200.c **** 	// update pointer
+ 536:App/STM32F4-Discovery/W5200.c **** 	read_ptr += read_len;
+ 1979              		.loc 1 536 0
+ 1980 008e BA89     		ldrh	r2, [r7, #12]	@ movhi
+ 1981 0090 FB89     		ldrh	r3, [r7, #14]	@ movhi
+ 1982 0092 1344     		add	r3, r3, r2
+ 1983 0094 BB81     		strh	r3, [r7, #12]	@ movhi
+ 537:App/STM32F4-Discovery/W5200.c **** 	set_RXRD(sck_fd, read_ptr);
+ 1984              		.loc 1 537 0
+ 1985 0096 FA79     		ldrb	r2, [r7, #7]	@ zero_extendqisi2
+ 1986 0098 BB89     		ldrh	r3, [r7, #12]
+ 1987 009a 1046     		mov	r0, r2
+ 1988 009c 1946     		mov	r1, r3
+ 1989 009e FFF7FEFF 		bl	set_RXRD
+ 538:App/STM32F4-Discovery/W5200.c **** 
+ 539:App/STM32F4-Discovery/W5200.c **** 	// recive command
+ 540:App/STM32F4-Discovery/W5200.c **** 	spi_dma_sendByte(W5200_Sn_CR(sck_fd), W5200_Sn_CR_RECV);
+ 1990              		.loc 1 540 0
+ 1991 00a2 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1992 00a4 9BB2     		uxth	r3, r3
+ 1993 00a6 1B02     		lsls	r3, r3, #8
+ 1994 00a8 9BB2     		uxth	r3, r3
+ 1995 00aa 03F58043 		add	r3, r3, #16384
+ 1996 00ae 0133     		adds	r3, r3, #1
+ 1997 00b0 9BB2     		uxth	r3, r3
+ 1998 00b2 1846     		mov	r0, r3
+ 1999 00b4 4021     		movs	r1, #64
+ 2000 00b6 FFF7FEFF 		bl	spi_dma_sendByte
+ 541:App/STM32F4-Discovery/W5200.c **** 	// wait command complete.
+ 542:App/STM32F4-Discovery/W5200.c **** 	while(get_CRStatus(sck_fd) != 0);	// 0 value is command complete. 
+ 2001              		.loc 1 542 0
+ 2002 00ba 00BF     		nop
+ 2003              	.L114:
+ 2004              		.loc 1 542 0 is_stmt 0 discriminator 1
+ 2005 00bc FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 2006 00be 1846     		mov	r0, r3
+ 2007 00c0 FFF7FEFF 		bl	get_CRStatus
+ 2008 00c4 0346     		mov	r3, r0
+ 2009 00c6 002B     		cmp	r3, #0
+ 2010 00c8 F8D1     		bne	.L114
+ 543:App/STM32F4-Discovery/W5200.c **** 	
+ 544:App/STM32F4-Discovery/W5200.c **** 
+ 545:App/STM32F4-Discovery/W5200.c ****  	return	(read_len < len ? read_len: len);
+ 2011              		.loc 1 545 0 is_stmt 1
+ 2012 00ca BA88     		ldrh	r2, [r7, #4]
+ 2013 00cc FB89     		ldrh	r3, [r7, #14]
+ 2014 00ce 9A42     		cmp	r2, r3
+ 2015 00d0 38BF     		it	cc
+ 2016 00d2 1346     		movcc	r3, r2
+ 2017 00d4 9BB2     		uxth	r3, r3
+ 2018              	.L108:
+ 546:App/STM32F4-Discovery/W5200.c **** }
+ 2019              		.loc 1 546 0
+ 2020 00d6 1846     		mov	r0, r3
+ 2021 00d8 1037     		adds	r7, r7, #16
+ 2022 00da BD46     		mov	sp, r7
+ 2023              		@ sp needed
+ 2024 00dc 80BD     		pop	{r7, pc}
+ 2025              	.L116:
+ 2026 00de 00BF     		.align	2
+ 2027              	.L115:
+ 2028 00e0 00000000 		.word	socket_flg
+ 2029              		.cfi_endproc
+ 2030              	.LFE130:
+ 2032              		.section	.text.listen,"ax",%progbits
+ 2033              		.align	2
+ 2034              		.global	listen
+ 2035              		.thumb
+ 2036              		.thumb_func
+ 2038              	listen:
+ 2039              	.LFB131:
+ 547:App/STM32F4-Discovery/W5200.c **** 
+ 548:App/STM32F4-Discovery/W5200.c **** 
+ 549:App/STM32F4-Discovery/W5200.c **** int	listen(int sck_fd)
+ 550:App/STM32F4-Discovery/W5200.c **** {
+ 2040              		.loc 1 550 0
+ 2041              		.cfi_startproc
+ 2042              		@ args = 0, pretend = 0, frame = 16
+ 2043              		@ frame_needed = 1, uses_anonymous_args = 0
+ 2044 0000 80B5     		push	{r7, lr}
+ 2045              	.LCFI63:
+ 2046              		.cfi_def_cfa_offset 8
+ 2047              		.cfi_offset 7, -8
+ 2048              		.cfi_offset 14, -4
+ 2049 0002 84B0     		sub	sp, sp, #16
+ 2050              	.LCFI64:
+ 2051              		.cfi_def_cfa_offset 24
+ 2052 0004 00AF     		add	r7, sp, #0
+ 2053              	.LCFI65:
+ 2054              		.cfi_def_cfa_register 7
+ 2055 0006 7860     		str	r0, [r7, #4]
+ 551:App/STM32F4-Discovery/W5200.c **** 	// check socket asign flag
+ 552:App/STM32F4-Discovery/W5200.c **** 	if(sck_fd < 0 || sck_fd >=W5200_MAX_SOCKETS||  socket_flg[sck_fd] != 1) return -1;
+ 2056              		.loc 1 552 0
+ 2057 0008 7B68     		ldr	r3, [r7, #4]
+ 2058 000a 002B     		cmp	r3, #0
+ 2059 000c 08DB     		blt	.L118
+ 2060              		.loc 1 552 0 is_stmt 0 discriminator 2
+ 2061 000e 7B68     		ldr	r3, [r7, #4]
+ 2062 0010 072B     		cmp	r3, #7
+ 2063 0012 05DC     		bgt	.L118
+ 2064              		.loc 1 552 0 discriminator 1
+ 2065 0014 224A     		ldr	r2, .L125
+ 2066 0016 7B68     		ldr	r3, [r7, #4]
+ 2067 0018 1344     		add	r3, r3, r2
+ 2068 001a 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 2069 001c 012B     		cmp	r3, #1
+ 2070 001e 02D0     		beq	.L119
+ 2071              	.L118:
+ 2072 0020 4FF0FF33 		mov	r3, #-1
+ 2073 0024 38E0     		b	.L124
+ 2074              	.L119:
+ 553:App/STM32F4-Discovery/W5200.c **** 
+ 554:App/STM32F4-Discovery/W5200.c **** 	// LISTEN start from INIT only.
+ 555:App/STM32F4-Discovery/W5200.c **** 	if(get_SRStatus(sck_fd)  != W5200_Sn_SR_SOCK_INIT) return -1;
+ 2075              		.loc 1 555 0 is_stmt 1
+ 2076 0026 7B68     		ldr	r3, [r7, #4]
+ 2077 0028 DBB2     		uxtb	r3, r3
+ 2078 002a 1846     		mov	r0, r3
+ 2079 002c FFF7FEFF 		bl	get_SRStatus
+ 2080 0030 0346     		mov	r3, r0
+ 2081 0032 132B     		cmp	r3, #19
+ 2082 0034 02D0     		beq	.L121
+ 2083              		.loc 1 555 0 is_stmt 0 discriminator 1
+ 2084 0036 4FF0FF33 		mov	r3, #-1
+ 2085 003a 2DE0     		b	.L124
+ 2086              	.L121:
+ 556:App/STM32F4-Discovery/W5200.c **** 
+ 557:App/STM32F4-Discovery/W5200.c **** 
+ 558:App/STM32F4-Discovery/W5200.c **** 	uint8_t b;
+ 559:App/STM32F4-Discovery/W5200.c **** 	spi_dma_read(W5200_Sn_IR(sck_fd), 1);
+ 2087              		.loc 1 559 0 is_stmt 1
+ 2088 003c 7B68     		ldr	r3, [r7, #4]
+ 2089 003e 9BB2     		uxth	r3, r3
+ 2090 0040 1B02     		lsls	r3, r3, #8
+ 2091 0042 9BB2     		uxth	r3, r3
+ 2092 0044 03F58043 		add	r3, r3, #16384
+ 2093 0048 0233     		adds	r3, r3, #2
+ 2094 004a 9BB2     		uxth	r3, r3
+ 2095 004c 1846     		mov	r0, r3
+ 2096 004e 0121     		movs	r1, #1
+ 2097 0050 FFF7FEFF 		bl	spi_dma_read
+ 560:App/STM32F4-Discovery/W5200.c **** 	memcpy(&b, bufferRX + 4, 1);
+ 2098              		.loc 1 560 0
+ 2099 0054 134B     		ldr	r3, .L125+4
+ 2100 0056 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 2101 0058 FB73     		strb	r3, [r7, #15]
+ 561:App/STM32F4-Discovery/W5200.c **** 
+ 562:App/STM32F4-Discovery/W5200.c **** 	// CONNECT command
+ 563:App/STM32F4-Discovery/W5200.c **** 	spi_dma_sendByte(W5200_Sn_CR(sck_fd), W5200_Sn_CR_LISTEN);
+ 2102              		.loc 1 563 0
+ 2103 005a 7B68     		ldr	r3, [r7, #4]
+ 2104 005c 9BB2     		uxth	r3, r3
+ 2105 005e 1B02     		lsls	r3, r3, #8
+ 2106 0060 9BB2     		uxth	r3, r3
+ 2107 0062 03F58043 		add	r3, r3, #16384
+ 2108 0066 0133     		adds	r3, r3, #1
+ 2109 0068 9BB2     		uxth	r3, r3
+ 2110 006a 1846     		mov	r0, r3
+ 2111 006c 0221     		movs	r1, #2
+ 2112 006e FFF7FEFF 		bl	spi_dma_sendByte
+ 564:App/STM32F4-Discovery/W5200.c **** 	while(get_CRStatus(sck_fd) != 0);	// 0 value is command complete. 
+ 2113              		.loc 1 564 0
+ 2114 0072 00BF     		nop
+ 2115              	.L122:
+ 2116              		.loc 1 564 0 is_stmt 0 discriminator 1
+ 2117 0074 7B68     		ldr	r3, [r7, #4]
+ 2118 0076 DBB2     		uxtb	r3, r3
+ 2119 0078 1846     		mov	r0, r3
+ 2120 007a FFF7FEFF 		bl	get_CRStatus
+ 2121 007e 0346     		mov	r3, r0
+ 2122 0080 002B     		cmp	r3, #0
+ 2123 0082 F7D1     		bne	.L122
+ 565:App/STM32F4-Discovery/W5200.c **** 
+ 566:App/STM32F4-Discovery/W5200.c **** 	// wait for status change to LISTEN
+ 567:App/STM32F4-Discovery/W5200.c **** 	while(get_SRStatus(sck_fd) != W5200_Sn_SR_SOCK_LISTEN);
+ 2124              		.loc 1 567 0 is_stmt 1
+ 2125 0084 00BF     		nop
+ 2126              	.L123:
+ 2127              		.loc 1 567 0 is_stmt 0 discriminator 1
+ 2128 0086 7B68     		ldr	r3, [r7, #4]
+ 2129 0088 DBB2     		uxtb	r3, r3
+ 2130 008a 1846     		mov	r0, r3
+ 2131 008c FFF7FEFF 		bl	get_SRStatus
+ 2132 0090 0346     		mov	r3, r0
+ 2133 0092 142B     		cmp	r3, #20
+ 2134 0094 F7D1     		bne	.L123
+ 568:App/STM32F4-Discovery/W5200.c **** 	 
+ 569:App/STM32F4-Discovery/W5200.c **** 	return 0;	// listen success complete
+ 2135              		.loc 1 569 0 is_stmt 1
+ 2136 0096 0023     		movs	r3, #0
+ 2137              	.L124:
+ 570:App/STM32F4-Discovery/W5200.c **** }
+ 2138              		.loc 1 570 0
+ 2139 0098 1846     		mov	r0, r3
+ 2140 009a 1037     		adds	r7, r7, #16
+ 2141 009c BD46     		mov	sp, r7
+ 2142              		@ sp needed
+ 2143 009e 80BD     		pop	{r7, pc}
+ 2144              	.L126:
+ 2145              		.align	2
+ 2146              	.L125:
+ 2147 00a0 00000000 		.word	socket_flg
+ 2148 00a4 04000000 		.word	bufferRX+4
+ 2149              		.cfi_endproc
+ 2150              	.LFE131:
+ 2152              		.section	.text.locate_interrupt,"ax",%progbits
+ 2153              		.align	2
+ 2154              		.global	locate_interrupt
+ 2155              		.thumb
+ 2156              		.thumb_func
+ 2158              	locate_interrupt:
+ 2159              	.LFB132:
+ 571:App/STM32F4-Discovery/W5200.c **** 
+ 572:App/STM32F4-Discovery/W5200.c **** 
+ 573:App/STM32F4-Discovery/W5200.c **** 
+ 574:App/STM32F4-Discovery/W5200.c **** void locate_interrupt()
+ 575:App/STM32F4-Discovery/W5200.c **** {
+ 2160              		.loc 1 575 0
+ 2161              		.cfi_startproc
+ 2162              		@ args = 0, pretend = 0, frame = 8
+ 2163              		@ frame_needed = 1, uses_anonymous_args = 0
+ 2164 0000 80B5     		push	{r7, lr}
+ 2165              	.LCFI66:
+ 2166              		.cfi_def_cfa_offset 8
+ 2167              		.cfi_offset 7, -8
+ 2168              		.cfi_offset 14, -4
+ 2169 0002 82B0     		sub	sp, sp, #8
+ 2170              	.LCFI67:
+ 2171              		.cfi_def_cfa_offset 16
+ 2172 0004 00AF     		add	r7, sp, #0
+ 2173              	.LCFI68:
+ 2174              		.cfi_def_cfa_register 7
+ 576:App/STM32F4-Discovery/W5200.c **** 	uint8_t code = 0x4; 
+ 2175              		.loc 1 576 0
+ 2176 0006 0423     		movs	r3, #4
+ 2177 0008 FB71     		strb	r3, [r7, #7]
+ 577:App/STM32F4-Discovery/W5200.c **** 	spi_dma_read(W5200_IMR2, 1);
+ 2178              		.loc 1 577 0
+ 2179 000a 3620     		movs	r0, #54
+ 2180 000c 0121     		movs	r1, #1
+ 2181 000e FFF7FEFF 		bl	spi_dma_read
+ 578:App/STM32F4-Discovery/W5200.c **** 	memcpy(&code, bufferRX + 4, 1);
+ 2182              		.loc 1 578 0
+ 2183 0012 154B     		ldr	r3, .L135
+ 2184 0014 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 2185 0016 FB71     		strb	r3, [r7, #7]
+ 579:App/STM32F4-Discovery/W5200.c **** 	spi_dma_read(W5200_Sn_IR(code), 1);
+ 2186              		.loc 1 579 0
+ 2187 0018 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 2188 001a 1B02     		lsls	r3, r3, #8
+ 2189 001c 9BB2     		uxth	r3, r3
+ 2190 001e 03F58043 		add	r3, r3, #16384
+ 2191 0022 0233     		adds	r3, r3, #2
+ 2192 0024 9BB2     		uxth	r3, r3
+ 2193 0026 1846     		mov	r0, r3
+ 2194 0028 0121     		movs	r1, #1
+ 2195 002a FFF7FEFF 		bl	spi_dma_read
+ 580:App/STM32F4-Discovery/W5200.c **** 	memcpy(&code, bufferRX +4 , 1);
+ 2196              		.loc 1 580 0
+ 2197 002e 0E4B     		ldr	r3, .L135
+ 2198 0030 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 2199 0032 FB71     		strb	r3, [r7, #7]
+ 581:App/STM32F4-Discovery/W5200.c ****        
+ 582:App/STM32F4-Discovery/W5200.c **** 	
+ 583:App/STM32F4-Discovery/W5200.c **** 	spi_dma_sendByte(W5200_Sn_IR(0x0), 0xff);
+ 2200              		.loc 1 583 0
+ 2201 0034 44F20200 		movw	r0, #16386
+ 2202 0038 FF21     		movs	r1, #255
+ 2203 003a FFF7FEFF 		bl	spi_dma_sendByte
+ 584:App/STM32F4-Discovery/W5200.c **** 	switch (code )
+ 2204              		.loc 1 584 0
+ 2205 003e FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 2206 0040 022B     		cmp	r3, #2
+ 2207 0042 0AD0     		beq	.L133
+ 2208 0044 042B     		cmp	r3, #4
+ 2209 0046 02D0     		beq	.L130
+ 2210 0048 012B     		cmp	r3, #1
+ 2211 004a 08D0     		beq	.L134
+ 585:App/STM32F4-Discovery/W5200.c **** 	{
+ 586:App/STM32F4-Discovery/W5200.c **** 		case 0x1: 
+ 587:App/STM32F4-Discovery/W5200.c **** 			// connection established 
+ 588:App/STM32F4-Discovery/W5200.c **** 			// do nothing wait for input. 
+ 589:App/STM32F4-Discovery/W5200.c **** 			break;
+ 590:App/STM32F4-Discovery/W5200.c **** 		case 0x2:
+ 591:App/STM32F4-Discovery/W5200.c **** 			break;
+ 592:App/STM32F4-Discovery/W5200.c **** 		case 0x4:
+ 593:App/STM32F4-Discovery/W5200.c **** 			vTaskResume(set_macTaskHandle); 
+ 594:App/STM32F4-Discovery/W5200.c **** 			break;
+ 595:App/STM32F4-Discovery/W5200.c **** 		default:
+ 596:App/STM32F4-Discovery/W5200.c **** 			break;		
+ 2212              		.loc 1 596 0
+ 2213 004c 08E0     		b	.L127
+ 2214              	.L130:
+ 593:App/STM32F4-Discovery/W5200.c **** 			vTaskResume(set_macTaskHandle); 
+ 2215              		.loc 1 593 0
+ 2216 004e 074B     		ldr	r3, .L135+4
+ 2217 0050 1B68     		ldr	r3, [r3]
+ 2218 0052 1846     		mov	r0, r3
+ 2219 0054 FFF7FEFF 		bl	vTaskResume
+ 594:App/STM32F4-Discovery/W5200.c **** 			break;
+ 2220              		.loc 1 594 0
+ 2221 0058 02E0     		b	.L127
+ 2222              	.L133:
+ 591:App/STM32F4-Discovery/W5200.c **** 			break;
+ 2223              		.loc 1 591 0
+ 2224 005a 00BF     		nop
+ 2225 005c 00E0     		b	.L127
+ 2226              	.L134:
+ 589:App/STM32F4-Discovery/W5200.c **** 			break;
+ 2227              		.loc 1 589 0
+ 2228 005e 00BF     		nop
+ 2229              	.L127:
+ 597:App/STM32F4-Discovery/W5200.c **** 	}
+ 598:App/STM32F4-Discovery/W5200.c **** }
+ 2230              		.loc 1 598 0
+ 2231 0060 0837     		adds	r7, r7, #8
+ 2232 0062 BD46     		mov	sp, r7
+ 2233              		@ sp needed
+ 2234 0064 80BD     		pop	{r7, pc}
+ 2235              	.L136:
+ 2236 0066 00BF     		.align	2
+ 2237              	.L135:
+ 2238 0068 04000000 		.word	bufferRX+4
+ 2239 006c 00000000 		.word	set_macTaskHandle
+ 2240              		.cfi_endproc
+ 2241              	.LFE132:
+ 2243              		.section	.text.EXTI0_IRQHandler,"ax",%progbits
+ 2244              		.align	2
+ 2245              		.global	EXTI0_IRQHandler
+ 2246              		.thumb
+ 2247              		.thumb_func
+ 2249              	EXTI0_IRQHandler:
+ 2250              	.LFB133:
+ 599:App/STM32F4-Discovery/W5200.c **** 
+ 600:App/STM32F4-Discovery/W5200.c **** 
+ 601:App/STM32F4-Discovery/W5200.c **** void EXTI0_IRQHandler(void) //EXTI0 ISR
+ 602:App/STM32F4-Discovery/W5200.c **** {
+ 2251              		.loc 1 602 0
+ 2252              		.cfi_startproc
+ 2253              		@ args = 0, pretend = 0, frame = 0
+ 2254              		@ frame_needed = 1, uses_anonymous_args = 0
+ 2255 0000 80B5     		push	{r7, lr}
+ 2256              	.LCFI69:
+ 2257              		.cfi_def_cfa_offset 8
+ 2258              		.cfi_offset 7, -8
+ 2259              		.cfi_offset 14, -4
+ 2260 0002 00AF     		add	r7, sp, #0
+ 2261              	.LCFI70:
+ 2262              		.cfi_def_cfa_register 7
+ 603:App/STM32F4-Discovery/W5200.c ****  
+ 604:App/STM32F4-Discovery/W5200.c **** 	if(EXTI_GetITStatus(EXTI_Line0) != RESET) //check if EXTI line is asserted
+ 2263              		.loc 1 604 0
+ 2264 0004 0120     		movs	r0, #1
+ 2265 0006 FFF7FEFF 		bl	EXTI_GetITStatus
+ 2266 000a 0346     		mov	r3, r0
+ 2267 000c 002B     		cmp	r3, #0
+ 2268 000e 04D0     		beq	.L137
+ 605:App/STM32F4-Discovery/W5200.c **** 	{
+ 606:App/STM32F4-Discovery/W5200.c **** 	 	EXTI_ClearFlag(EXTI_Line0); //clear interrupt
+ 2269              		.loc 1 606 0
+ 2270 0010 0120     		movs	r0, #1
+ 2271 0012 FFF7FEFF 		bl	EXTI_ClearFlag
+ 607:App/STM32F4-Discovery/W5200.c ****  		locate_interrupt();
+ 2272              		.loc 1 607 0
+ 2273 0016 FFF7FEFF 		bl	locate_interrupt
+ 2274              	.L137:
+ 608:App/STM32F4-Discovery/W5200.c **** 	}
+ 609:App/STM32F4-Discovery/W5200.c **** }
+ 2275              		.loc 1 609 0
+ 2276 001a 80BD     		pop	{r7, pc}
+ 2277              		.cfi_endproc
+ 2278              	.LFE133:
+ 2280              		.text
+ 2281              	.Letext0:
+ 2282              		.file 2 "/Users/maticknap/Downloads/gcc-arm-none-eabi-4_8-2014q2/arm-none-eabi/include/machine/_de
+ 2283              		.file 3 "/Users/maticknap/Downloads/gcc-arm-none-eabi-4_8-2014q2/arm-none-eabi/include/stdint.h"
+ 2284              		.file 4 "Source/include/task.h"
+ 2285              		.file 5 "Source/include/queue.h"
+ 2286              		.file 6 "Source/include/semphr.h"
+ 2287              		.file 7 "App/STM32F4-Discovery/spi.h"
+ 2288              		.file 8 "App/STM32F4-Discovery/Libraries/CMSIS/Include/core_cm4.h"
+ 2289              		.file 9 "App/STM32F4-Discovery/W5200.h"
+ 2290              		.file 10 "App/STM32F4-Discovery/Libraries/CMSIS/ST/STM32F4xx/Include/stm32f4xx.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 W5200.c
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:20     .rodata.revision:0000000000000000 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:23     .rodata.revision:0000000000000000 revision
+                            *COM*:0000000000000004 set_macTaskHandle
+                            *COM*:00000000000007d0 bufferTX
+                            *COM*:00000000000007d0 bufferRX
+                            *COM*:0000000000000004 bufferRXidx
+                            *COM*:0000000000000004 bufferTXidx
+                            *COM*:0000000000000004 dat_lengthRX
+                            *COM*:0000000000000004 dat_lengthTX
+                            *COM*:0000000000000004 xSemaphoreDMASPI
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:34     .bss.xHigherPriorityTaskWoken:0000000000000000 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:37     .bss.xHigherPriorityTaskWoken:0000000000000000 xHigherPriorityTaskWoken
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:40     .rodata.RAMSIZE_TABLE:0000000000000000 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:43     .rodata.RAMSIZE_TABLE:0000000000000000 RAMSIZE_TABLE
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:63     .bss.socket_table:0000000000000000 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:66     .bss.socket_table:0000000000000000 socket_table
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:69     .bss.socket_flg:0000000000000000 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:72     .bss.socket_flg:0000000000000000 socket_flg
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:75     .rodata.socket_open_status:0000000000000000 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:78     .rodata.socket_open_status:0000000000000000 socket_open_status
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:86     .text.wiznet_initialize:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:91     .text.wiznet_initialize:0000000000000000 wiznet_initialize
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:202    .text.wiznet_initialize:00000000000000ac $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:207    .text.wiznet_set_hardware_address:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:212    .text.wiznet_set_hardware_address:0000000000000000 wiznet_set_hardware_address
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:244    .text.wiznet_get_hardware_address:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:249    .text.wiznet_get_hardware_address:0000000000000000 wiznet_get_hardware_address
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:284    .text.wiznet_get_hardware_address:0000000000000020 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:289    .text.wiznet_configure_network:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:294    .text.wiznet_configure_network:0000000000000000 wiznet_configure_network
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:338    .text.wiznet_get_ipaddress:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:343    .text.wiznet_get_ipaddress:0000000000000000 wiznet_get_ipaddress
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:378    .text.wiznet_get_ipaddress:0000000000000020 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:383    .text.get_CRStatus:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:388    .text.get_CRStatus:0000000000000000 get_CRStatus
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:433    .text.get_CRStatus:0000000000000034 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:438    .text.get_SRStatus:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:443    .text.get_SRStatus:0000000000000000 get_SRStatus
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:488    .text.get_SRStatus:0000000000000034 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:493    .text.get_TXFSRStatus:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:498    .text.get_TXFSRStatus:0000000000000000 get_TXFSRStatus
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:550    .text.get_TXFSRStatus:0000000000000044 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:555    .text.get_TXWRStatus:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:560    .text.get_TXWRStatus:0000000000000000 get_TXWRStatus
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:612    .text.get_TXWRStatus:0000000000000044 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:617    .text.get_TXRD:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:622    .text.get_TXRD:0000000000000000 get_TXRD
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:674    .text.get_TXRD:0000000000000044 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:679    .text.set_TXWR:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:684    .text.set_TXWR:0000000000000000 set_TXWR
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:726    .text.get_RXRSR:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:731    .text.get_RXRSR:0000000000000000 get_RXRSR
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:783    .text.get_RXRSR:0000000000000044 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:788    .text.get_RXRD:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:793    .text.get_RXRD:0000000000000000 get_RXRD
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:845    .text.get_RXRD:0000000000000044 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:850    .text.set_RXRD:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:855    .text.set_RXRD:0000000000000000 set_RXRD
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:897    .text.write_memory:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:902    .text.write_memory:0000000000000000 write_memory
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1013   .text.read_memory:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1018   .text.read_memory:0000000000000000 read_memory
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1134   .text.read_memory:00000000000000bc $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1139   .text.socket:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1144   .text.socket:0000000000000000 socket
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1354   .text.socket:000000000000014c $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1359   .text.closesocket:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1364   .text.closesocket:0000000000000000 closesocket
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1452   .text.closesocket:0000000000000078 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1457   .text.connect:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1462   .text.connect:0000000000000000 connect
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1627   .text.connect:0000000000000104 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1632   .text.send:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1637   .text.send:0000000000000000 send
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1868   .text.send:0000000000000180 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1874   .text.recv:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:1879   .text.recv:0000000000000000 recv
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:2028   .text.recv:00000000000000e0 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:2033   .text.listen:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:2038   .text.listen:0000000000000000 listen
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:2147   .text.listen:00000000000000a0 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:2153   .text.locate_interrupt:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:2158   .text.locate_interrupt:0000000000000000 locate_interrupt
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:2238   .text.locate_interrupt:0000000000000068 $d
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:2244   .text.EXTI0_IRQHandler:0000000000000000 $t
+/var/folders/55/hyqmw0c94z570kz3rqrpw4jc0000gn/T//ccNdkZeu.s:2249   .text.EXTI0_IRQHandler:0000000000000000 EXTI0_IRQHandler
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+spi_dma_sendByte
+spi_dma_send
+spi_dma_read
+memcpy
+spi_dma_send2B
+vTaskResume
+EXTI_GetITStatus
+EXTI_ClearFlag
